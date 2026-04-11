@@ -6,11 +6,11 @@ option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
 
 import "api/v1/types.proto";
 
-message GroupPicksRequest {
+message ListGroupPicksRequest {
     string contest_slug = 1;
 }
 
-message GroupPicksResponse {
+message ListGroupPicksResponse {
     repeated GroupPick picks = 1;
 }
 
@@ -21,11 +21,11 @@ message CreateGroupPicksRequest {
 
 message CreateGroupPicksResponse {}
 
-message KnockoutPicksRequest {
+message ListKnockoutPicksRequest {
     string contest_slug = 1;
 }
 
-message KnockoutPicksResponse {
+message ListKnockoutPicksResponse {
     repeated KnockoutPick picks = 1;
 }
 
@@ -37,8 +37,8 @@ message CreateKnockoutPicksRequest {
 message CreateKnockoutPicksResponse {}
 
 service PicksService {
-    rpc ListGroupPicks(GroupPicksRequest) returns (GroupPicksResponse);
+    rpc ListGroupPicks(ListGroupPicksRequest) returns (ListGroupPicksResponse);
     rpc CreateGroupPicks(CreateGroupPicksRequest) returns (CreateGroupPicksResponse);
-    rpc ListKnockoutPicks(KnockoutPicksRequest) returns (KnockoutPicksResponse);
+    rpc ListKnockoutPicks(ListKnockoutPicksRequest) returns (ListKnockoutPicksResponse);
     rpc CreateKnockoutPicks(CreateKnockoutPicksRequest) returns (CreateKnockoutPicksResponse);
 }

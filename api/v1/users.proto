@@ -4,12 +4,12 @@ package api.v1;
 
 option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
 
-message UsersRequest {}
+message CountUsersRequest {}
 
-message UsersResponse {
+message CountUsersResponse {
     int64 count = 1;
 }
 
 service UsersService {
-    rpc CountUsers(UsersRequest) returns (UsersResponse);
+    rpc CountUsers(CountUsersRequest) returns (CountUsersResponse);
 }

@@ -6,11 +6,11 @@ option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
 
 import "api/v1/types.proto";
 
-message MatchesRequest {
+message ListMatchesRequest {
     string contest_slug = 1;
 }
 
-message MatchesResponse {
+message ListMatchesResponse {
     repeated Match matches = 1;
 }
 
@@ -22,6 +22,6 @@ message CreateMatchRequest {
 message CreateMatchResponse {}
 
 service MatchService {
-    rpc ListMatches(MatchesRequest) returns (MatchesResponse);
+    rpc ListMatches(ListMatchesRequest) returns (ListMatchesResponse);
     rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
 }
