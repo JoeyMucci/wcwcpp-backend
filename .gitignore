@@ -1,0 +1,13 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/server
+
+# Node
+node_modules/
+dist/
+
+# Buf generated files (optional depending on if you want them checked in)

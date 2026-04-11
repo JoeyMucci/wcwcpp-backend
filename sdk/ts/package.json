@@ -1,0 +1,17 @@
+{
+  "name": "wcwcpp-api",
+  "version": "1.0.0",
+  "description": "ConnectRPC client and Protobuf definitions for wcwcpp",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^1.9.0",
+    "@connectrpc/connect": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

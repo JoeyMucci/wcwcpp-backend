@@ -1,0 +1,17 @@
+name: Protobuf
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-generate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Buf
+      uses: bufbuild/buf-setup-action@v1
+    - name: Lint Protobuf
+      uses: bufbuild/buf-lint-action@v1
