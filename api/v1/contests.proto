@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
+
+import "api/v1/types.proto";
+import "buf/validate/validate.proto";
+
+message ListContestsRequest {}
+
+message ListContestsResponse {
+    repeated Contest contests = 1;
+}
+
+message CreateContestRequest {
+    string name = 1;
+    repeated Group groups = 2 [(buf.validate.field).repeated = {
+        min_items: 12,
+        max_items: 12
+    }];
+}
+
+message CreateContestResponse {}
+
+message ListSubcontestsRequest {
+    string contest_slug = 1;
+}
+
+message ListSubcontestsResponse {
+    repeated Contest subcontests = 1;
+}
+
+message CreateSubcontestRequest {
+    string subcontest_slug = 1;
+    string name = 2;
+}
+
+message CreateSubcontestResponse {}
+
+message DeleteSubcontestRequest {
+    string subcontest_slug = 1;
+}
+
+message DeleteSubcontestResponse {}
+
+service ContestService {
+    rpc ListContests(ListContestsRequest) returns (ListContestsResponse);
+    rpc ListSubcontests(ListSubcontestsRequest) returns (ListSubcontestsResponse);
+    rpc CreateSubcontest(CreateSubcontestRequest) returns (CreateSubcontestResponse);
+    rpc DeleteSubcontest(DeleteSubcontestRequest) returns (DeleteSubcontestResponse);
+}

@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
+
+import "api/v1/types.proto";
+
+message ListGroupPicksRequest {
+    string contest_slug = 1;
+}
+
+message ListGroupPicksResponse {
+    repeated GroupPick picks = 1;
+}
+
+message CreateGroupPicksRequest {
+    string contest_slug = 1;
+    GroupPick pick = 2;
+}
+
+message CreateGroupPicksResponse {}
+
+message ListKnockoutPicksRequest {
+    string contest_slug = 1;
+}
+
+message ListKnockoutPicksResponse {
+    repeated KnockoutPick picks = 1;
+}
+
+message CreateKnockoutPicksRequest {
+    string contest_slug = 1;
+    KnockoutPick pick = 2;
+}
+
+message CreateKnockoutPicksResponse {}
+
+service PicksService {
+    rpc ListGroupPicks(ListGroupPicksRequest) returns (ListGroupPicksResponse);
+    rpc CreateGroupPicks(CreateGroupPicksRequest) returns (CreateGroupPicksResponse);
+    rpc ListKnockoutPicks(ListKnockoutPicksRequest) returns (ListKnockoutPicksResponse);
+    rpc CreateKnockoutPicks(CreateKnockoutPicksRequest) returns (CreateKnockoutPicksResponse);
+}

@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
+
+import "api/v1/types.proto";
+import "buf/validate/validate.proto";
+
+message LeaderboardRequest {
+    string contest_slug = 1;
+    int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+    string page_token = 3;
+}
+
+message LeaderboardResponse {
+    repeated LeaderboardEntry leaderboard = 1;
+    string next_page_token = 2;
+}
+
+message SubleaderboardRequest {
+    string subcontest_slug = 1;
+    int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+    string page_token = 3;
+}
+
+message SubleaderboardResponse {
+    repeated LeaderboardEntry subleaderboard = 1;
+    string next_page_token = 2;
+}
+
+service LeaderboardService {
+    rpc Leaderboard(LeaderboardRequest) returns (LeaderboardResponse);
+    rpc Subleaderboard(SubleaderboardRequest) returns (SubleaderboardResponse);
+}
