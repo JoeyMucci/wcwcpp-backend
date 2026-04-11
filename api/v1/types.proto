@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
+
+import "buf/validate/validate.proto";
+
+message Contest {
+    string slug = 1;
+    string name = 2;
+    bool active = 3;
+}
+
+message Country {
+    string code = 1;
+}
+
+message Group {
+    string letter = 1;
+    repeated Country countries = 2 [(buf.validate.field).repeated = {
+        min_items: 4,
+        max_items: 4
+    }];
+}
+
+message GroupPick {
+    Group group = 1;
+    bool extra_qualifier = 2;
+}
+
+message KnockoutEntry {
+    Country country = 1;
+    int64 round = 2;
+}
+
+message KnockoutPick {
+    repeated KnockoutEntry entries = 1 [(buf.validate.field).repeated = {
+        min_items: 32,
+        max_items: 32
+    }];
+}
+
+message Match {
+    Country country1 = 1;
+    Country country2 = 2;
+    optional int64 country1_goals = 4;
+    optional int64 country2_goals = 5;
+    optional int64 country1_penalties = 6;
+    optional int64 country2_penalties = 7;
+}
+
+message LeaderboardEntry {
+    string name = 1;
+    int64 score = 2;
+}

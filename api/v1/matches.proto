@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
+
+import "api/v1/types.proto";
+
+message MatchesRequest {
+    string contest_slug = 1;
+}
+
+message MatchesResponse {
+    repeated Match matches = 1;
+}
+
+message CreateMatchRequest {
+    string contest_slug = 1;
+    Match match = 2;
+}
+
+message CreateMatchResponse {}
+
+service MatchService {
+    rpc ListMatches(MatchesRequest) returns (MatchesResponse);
+    rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
+}
