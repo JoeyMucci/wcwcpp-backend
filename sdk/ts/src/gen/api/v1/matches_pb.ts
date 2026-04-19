@@ -8,76 +8,156 @@ import { Message, proto3 } from "@bufbuild/protobuf";
 import { Match } from "./types_pb.js";
 
 /**
- * @generated from message api.v1.MatchesRequest
+ * @generated from message api.v1.ListGroupMatchesRequest
  */
-export class MatchesRequest extends Message<MatchesRequest> {
+export class ListGroupMatchesRequest extends Message<ListGroupMatchesRequest> {
   /**
    * @generated from field: string contest_slug = 1;
    */
   contestSlug = "";
 
-  constructor(data?: PartialMessage<MatchesRequest>) {
+  /**
+   * @generated from field: string letter = 2;
+   */
+  letter = "";
+
+  constructor(data?: PartialMessage<ListGroupMatchesRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.MatchesRequest";
+  static readonly typeName = "api.v1.ListGroupMatchesRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "letter", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MatchesRequest {
-    return new MatchesRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListGroupMatchesRequest {
+    return new ListGroupMatchesRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MatchesRequest {
-    return new MatchesRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListGroupMatchesRequest {
+    return new ListGroupMatchesRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MatchesRequest {
-    return new MatchesRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListGroupMatchesRequest {
+    return new ListGroupMatchesRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: MatchesRequest | PlainMessage<MatchesRequest> | undefined, b: MatchesRequest | PlainMessage<MatchesRequest> | undefined): boolean {
-    return proto3.util.equals(MatchesRequest, a, b);
+  static equals(a: ListGroupMatchesRequest | PlainMessage<ListGroupMatchesRequest> | undefined, b: ListGroupMatchesRequest | PlainMessage<ListGroupMatchesRequest> | undefined): boolean {
+    return proto3.util.equals(ListGroupMatchesRequest, a, b);
   }
 }
 
 /**
- * @generated from message api.v1.MatchesResponse
+ * @generated from message api.v1.ListGroupMatchesResponse
  */
-export class MatchesResponse extends Message<MatchesResponse> {
+export class ListGroupMatchesResponse extends Message<ListGroupMatchesResponse> {
   /**
    * @generated from field: repeated api.v1.Match matches = 1;
    */
   matches: Match[] = [];
 
-  constructor(data?: PartialMessage<MatchesResponse>) {
+  constructor(data?: PartialMessage<ListGroupMatchesResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.MatchesResponse";
+  static readonly typeName = "api.v1.ListGroupMatchesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "matches", kind: "message", T: Match, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MatchesResponse {
-    return new MatchesResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListGroupMatchesResponse {
+    return new ListGroupMatchesResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MatchesResponse {
-    return new MatchesResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListGroupMatchesResponse {
+    return new ListGroupMatchesResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MatchesResponse {
-    return new MatchesResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListGroupMatchesResponse {
+    return new ListGroupMatchesResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: MatchesResponse | PlainMessage<MatchesResponse> | undefined, b: MatchesResponse | PlainMessage<MatchesResponse> | undefined): boolean {
-    return proto3.util.equals(MatchesResponse, a, b);
+  static equals(a: ListGroupMatchesResponse | PlainMessage<ListGroupMatchesResponse> | undefined, b: ListGroupMatchesResponse | PlainMessage<ListGroupMatchesResponse> | undefined): boolean {
+    return proto3.util.equals(ListGroupMatchesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message api.v1.ListKnockoutMatchesRequest
+ */
+export class ListKnockoutMatchesRequest extends Message<ListKnockoutMatchesRequest> {
+  /**
+   * @generated from field: string contest_slug = 1;
+   */
+  contestSlug = "";
+
+  constructor(data?: PartialMessage<ListKnockoutMatchesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.ListKnockoutMatchesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListKnockoutMatchesRequest {
+    return new ListKnockoutMatchesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListKnockoutMatchesRequest {
+    return new ListKnockoutMatchesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListKnockoutMatchesRequest {
+    return new ListKnockoutMatchesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListKnockoutMatchesRequest | PlainMessage<ListKnockoutMatchesRequest> | undefined, b: ListKnockoutMatchesRequest | PlainMessage<ListKnockoutMatchesRequest> | undefined): boolean {
+    return proto3.util.equals(ListKnockoutMatchesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message api.v1.ListKnockoutMatchesResponse
+ */
+export class ListKnockoutMatchesResponse extends Message<ListKnockoutMatchesResponse> {
+  /**
+   * @generated from field: repeated api.v1.Match matches = 1;
+   */
+  matches: Match[] = [];
+
+  constructor(data?: PartialMessage<ListKnockoutMatchesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.ListKnockoutMatchesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "matches", kind: "message", T: Match, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListKnockoutMatchesResponse {
+    return new ListKnockoutMatchesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListKnockoutMatchesResponse {
+    return new ListKnockoutMatchesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListKnockoutMatchesResponse {
+    return new ListKnockoutMatchesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListKnockoutMatchesResponse | PlainMessage<ListKnockoutMatchesResponse> | undefined, b: ListKnockoutMatchesResponse | PlainMessage<ListKnockoutMatchesResponse> | undefined): boolean {
+    return proto3.util.equals(ListKnockoutMatchesResponse, a, b);
   }
 }
 

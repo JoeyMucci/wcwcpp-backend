@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateMatchRequest, CreateMatchResponse, MatchesRequest, MatchesResponse } from "./matches_pb.js";
+import { CreateMatchRequest, CreateMatchResponse, ListGroupMatchesRequest, ListGroupMatchesResponse, ListKnockoutMatchesRequest, ListKnockoutMatchesResponse } from "./matches_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -13,12 +13,21 @@ export const MatchService = {
   typeName: "api.v1.MatchService",
   methods: {
     /**
-     * @generated from rpc api.v1.MatchService.ListMatches
+     * @generated from rpc api.v1.MatchService.ListGroupMatches
      */
-    listMatches: {
-      name: "ListMatches",
-      I: MatchesRequest,
-      O: MatchesResponse,
+    listGroupMatches: {
+      name: "ListGroupMatches",
+      I: ListGroupMatchesRequest,
+      O: ListGroupMatchesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc api.v1.MatchService.ListKnockoutMatches
+     */
+    listKnockoutMatches: {
+      name: "ListKnockoutMatches",
+      I: ListKnockoutMatchesRequest,
+      O: ListKnockoutMatchesResponse,
       kind: MethodKind.Unary,
     },
     /**

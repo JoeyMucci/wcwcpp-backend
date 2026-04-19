@@ -7,13 +7,14 @@ option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
 import "buf/validate/validate.proto";
 
 message Contest {
-    string slug = 1;
-    string name = 2;
+    string title = 1;
+    string slug = 2;
     bool active = 3;
 }
 
 message Country {
     string code = 1;
+    string full_name = 2;
 }
 
 message Group {
@@ -42,8 +43,8 @@ message KnockoutPick {
 }
 
 message Match {
-    Country country1 = 1;
-    Country country2 = 2;
+    optional Country country1 = 1;
+    optional Country country2 = 2;
     optional int64 country1_goals = 4;
     optional int64 country2_goals = 5;
     optional int64 country1_penalties = 6;

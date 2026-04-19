@@ -10,4 +10,4 @@
 node_modules/
 dist/
 
-# Buf generated files (optional depending on if you want them checked in)
+.env

@@ -8,70 +8,70 @@ import { Message, proto3 } from "@bufbuild/protobuf";
 import { Contest, Group } from "./types_pb.js";
 
 /**
- * @generated from message api.v1.ContestsRequest
+ * @generated from message api.v1.ListContestsRequest
  */
-export class ContestsRequest extends Message<ContestsRequest> {
-  constructor(data?: PartialMessage<ContestsRequest>) {
+export class ListContestsRequest extends Message<ListContestsRequest> {
+  constructor(data?: PartialMessage<ListContestsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.ContestsRequest";
+  static readonly typeName = "api.v1.ListContestsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ContestsRequest {
-    return new ContestsRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListContestsRequest {
+    return new ListContestsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ContestsRequest {
-    return new ContestsRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListContestsRequest {
+    return new ListContestsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ContestsRequest {
-    return new ContestsRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListContestsRequest {
+    return new ListContestsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ContestsRequest | PlainMessage<ContestsRequest> | undefined, b: ContestsRequest | PlainMessage<ContestsRequest> | undefined): boolean {
-    return proto3.util.equals(ContestsRequest, a, b);
+  static equals(a: ListContestsRequest | PlainMessage<ListContestsRequest> | undefined, b: ListContestsRequest | PlainMessage<ListContestsRequest> | undefined): boolean {
+    return proto3.util.equals(ListContestsRequest, a, b);
   }
 }
 
 /**
- * @generated from message api.v1.ContestsResponse
+ * @generated from message api.v1.ListContestsResponse
  */
-export class ContestsResponse extends Message<ContestsResponse> {
+export class ListContestsResponse extends Message<ListContestsResponse> {
   /**
    * @generated from field: repeated api.v1.Contest contests = 1;
    */
   contests: Contest[] = [];
 
-  constructor(data?: PartialMessage<ContestsResponse>) {
+  constructor(data?: PartialMessage<ListContestsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.ContestsResponse";
+  static readonly typeName = "api.v1.ListContestsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "contests", kind: "message", T: Contest, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ContestsResponse {
-    return new ContestsResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListContestsResponse {
+    return new ListContestsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ContestsResponse {
-    return new ContestsResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListContestsResponse {
+    return new ListContestsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ContestsResponse {
-    return new ContestsResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListContestsResponse {
+    return new ListContestsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ContestsResponse | PlainMessage<ContestsResponse> | undefined, b: ContestsResponse | PlainMessage<ContestsResponse> | undefined): boolean {
-    return proto3.util.equals(ContestsResponse, a, b);
+  static equals(a: ListContestsResponse | PlainMessage<ListContestsResponse> | undefined, b: ListContestsResponse | PlainMessage<ListContestsResponse> | undefined): boolean {
+    return proto3.util.equals(ListContestsResponse, a, b);
   }
 }
 
@@ -80,9 +80,9 @@ export class ContestsResponse extends Message<ContestsResponse> {
  */
 export class CreateContestRequest extends Message<CreateContestRequest> {
   /**
-   * @generated from field: string name = 1;
+   * @generated from field: string title = 1;
    */
-  name = "";
+  title = "";
 
   /**
    * @generated from field: repeated api.v1.Group groups = 2;
@@ -97,7 +97,7 @@ export class CreateContestRequest extends Message<CreateContestRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.CreateContestRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "groups", kind: "message", T: Group, repeated: true },
   ]);
 
@@ -150,76 +150,76 @@ export class CreateContestResponse extends Message<CreateContestResponse> {
 }
 
 /**
- * @generated from message api.v1.SubcontestsRequest
+ * @generated from message api.v1.ListSubcontestsRequest
  */
-export class SubcontestsRequest extends Message<SubcontestsRequest> {
+export class ListSubcontestsRequest extends Message<ListSubcontestsRequest> {
   /**
    * @generated from field: string contest_slug = 1;
    */
   contestSlug = "";
 
-  constructor(data?: PartialMessage<SubcontestsRequest>) {
+  constructor(data?: PartialMessage<ListSubcontestsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.SubcontestsRequest";
+  static readonly typeName = "api.v1.ListSubcontestsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubcontestsRequest {
-    return new SubcontestsRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSubcontestsRequest {
+    return new ListSubcontestsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubcontestsRequest {
-    return new SubcontestsRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSubcontestsRequest {
+    return new ListSubcontestsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubcontestsRequest {
-    return new SubcontestsRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSubcontestsRequest {
+    return new ListSubcontestsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SubcontestsRequest | PlainMessage<SubcontestsRequest> | undefined, b: SubcontestsRequest | PlainMessage<SubcontestsRequest> | undefined): boolean {
-    return proto3.util.equals(SubcontestsRequest, a, b);
+  static equals(a: ListSubcontestsRequest | PlainMessage<ListSubcontestsRequest> | undefined, b: ListSubcontestsRequest | PlainMessage<ListSubcontestsRequest> | undefined): boolean {
+    return proto3.util.equals(ListSubcontestsRequest, a, b);
   }
 }
 
 /**
- * @generated from message api.v1.SubcontestsResponse
+ * @generated from message api.v1.ListSubcontestsResponse
  */
-export class SubcontestsResponse extends Message<SubcontestsResponse> {
+export class ListSubcontestsResponse extends Message<ListSubcontestsResponse> {
   /**
    * @generated from field: repeated api.v1.Contest subcontests = 1;
    */
   subcontests: Contest[] = [];
 
-  constructor(data?: PartialMessage<SubcontestsResponse>) {
+  constructor(data?: PartialMessage<ListSubcontestsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.SubcontestsResponse";
+  static readonly typeName = "api.v1.ListSubcontestsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subcontests", kind: "message", T: Contest, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubcontestsResponse {
-    return new SubcontestsResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSubcontestsResponse {
+    return new ListSubcontestsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubcontestsResponse {
-    return new SubcontestsResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSubcontestsResponse {
+    return new ListSubcontestsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubcontestsResponse {
-    return new SubcontestsResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSubcontestsResponse {
+    return new ListSubcontestsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SubcontestsResponse | PlainMessage<SubcontestsResponse> | undefined, b: SubcontestsResponse | PlainMessage<SubcontestsResponse> | undefined): boolean {
-    return proto3.util.equals(SubcontestsResponse, a, b);
+  static equals(a: ListSubcontestsResponse | PlainMessage<ListSubcontestsResponse> | undefined, b: ListSubcontestsResponse | PlainMessage<ListSubcontestsResponse> | undefined): boolean {
+    return proto3.util.equals(ListSubcontestsResponse, a, b);
   }
 }
 
@@ -228,14 +228,14 @@ export class SubcontestsResponse extends Message<SubcontestsResponse> {
  */
 export class CreateSubcontestRequest extends Message<CreateSubcontestRequest> {
   /**
-   * @generated from field: string subcontest_slug = 1;
+   * @generated from field: string contest_slug = 1;
    */
-  subcontestSlug = "";
+  contestSlug = "";
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string subcontest_title = 2;
    */
-  name = "";
+  subcontestTitle = "";
 
   constructor(data?: PartialMessage<CreateSubcontestRequest>) {
     super();
@@ -245,8 +245,8 @@ export class CreateSubcontestRequest extends Message<CreateSubcontestRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.CreateSubcontestRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "subcontest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "subcontest_title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSubcontestRequest {
@@ -270,6 +270,11 @@ export class CreateSubcontestRequest extends Message<CreateSubcontestRequest> {
  * @generated from message api.v1.CreateSubcontestResponse
  */
 export class CreateSubcontestResponse extends Message<CreateSubcontestResponse> {
+  /**
+   * @generated from field: string join_code = 1;
+   */
+  joinCode = "";
+
   constructor(data?: PartialMessage<CreateSubcontestResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -278,6 +283,7 @@ export class CreateSubcontestResponse extends Message<CreateSubcontestResponse> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.CreateSubcontestResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "join_code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSubcontestResponse {
@@ -362,6 +368,74 @@ export class DeleteSubcontestResponse extends Message<DeleteSubcontestResponse> 
 
   static equals(a: DeleteSubcontestResponse | PlainMessage<DeleteSubcontestResponse> | undefined, b: DeleteSubcontestResponse | PlainMessage<DeleteSubcontestResponse> | undefined): boolean {
     return proto3.util.equals(DeleteSubcontestResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message api.v1.JoinSubcontestRequest
+ */
+export class JoinSubcontestRequest extends Message<JoinSubcontestRequest> {
+  /**
+   * @generated from field: string join_code = 1;
+   */
+  joinCode = "";
+
+  constructor(data?: PartialMessage<JoinSubcontestRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.JoinSubcontestRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "join_code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): JoinSubcontestRequest {
+    return new JoinSubcontestRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): JoinSubcontestRequest {
+    return new JoinSubcontestRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): JoinSubcontestRequest {
+    return new JoinSubcontestRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: JoinSubcontestRequest | PlainMessage<JoinSubcontestRequest> | undefined, b: JoinSubcontestRequest | PlainMessage<JoinSubcontestRequest> | undefined): boolean {
+    return proto3.util.equals(JoinSubcontestRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message api.v1.JoinSubcontestResponse
+ */
+export class JoinSubcontestResponse extends Message<JoinSubcontestResponse> {
+  constructor(data?: PartialMessage<JoinSubcontestResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.JoinSubcontestResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): JoinSubcontestResponse {
+    return new JoinSubcontestResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): JoinSubcontestResponse {
+    return new JoinSubcontestResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): JoinSubcontestResponse {
+    return new JoinSubcontestResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: JoinSubcontestResponse | PlainMessage<JoinSubcontestResponse> | undefined, b: JoinSubcontestResponse | PlainMessage<JoinSubcontestResponse> | undefined): boolean {
+    return proto3.util.equals(JoinSubcontestResponse, a, b);
   }
 }
 

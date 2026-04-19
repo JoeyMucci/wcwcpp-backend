@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { UsersRequest, UsersResponse } from "./users_pb.js";
+import { CountUsersRequest, CountUsersResponse } from "./users_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -17,8 +17,8 @@ export const UsersService = {
      */
     countUsers: {
       name: "CountUsers",
-      I: UsersRequest,
-      O: UsersResponse,
+      I: CountUsersRequest,
+      O: CountUsersResponse,
       kind: MethodKind.Unary,
     },
   }

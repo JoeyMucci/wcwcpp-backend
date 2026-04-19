@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateGroupPicksRequest, CreateGroupPicksResponse, CreateKnockoutPicksRequest, CreateKnockoutPicksResponse, GroupPicksRequest, GroupPicksResponse, KnockoutPicksRequest, KnockoutPicksResponse } from "./picks_pb.js";
+import { CreateGroupPicksRequest, CreateGroupPicksResponse, CreateKnockoutPicksRequest, CreateKnockoutPicksResponse, ListGroupPicksRequest, ListGroupPicksResponse, ListKnockoutPicksRequest, ListKnockoutPicksResponse } from "./picks_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -17,8 +17,8 @@ export const PicksService = {
      */
     listGroupPicks: {
       name: "ListGroupPicks",
-      I: GroupPicksRequest,
-      O: GroupPicksResponse,
+      I: ListGroupPicksRequest,
+      O: ListGroupPicksResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -35,8 +35,8 @@ export const PicksService = {
      */
     listKnockoutPicks: {
       name: "ListKnockoutPicks",
-      I: KnockoutPicksRequest,
-      O: KnockoutPicksResponse,
+      I: ListKnockoutPicksRequest,
+      O: ListKnockoutPicksResponse,
       kind: MethodKind.Unary,
     },
     /**

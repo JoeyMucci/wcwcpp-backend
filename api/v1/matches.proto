@@ -5,13 +5,29 @@ package api.v1;
 option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
 
 import "api/v1/types.proto";
+import "buf/validate/validate.proto";
 
-message ListMatchesRequest {
+message ListGroupMatchesRequest {
+    string contest_slug = 1;
+    string letter = 2;
+}
+
+message ListGroupMatchesResponse {
+    repeated Match matches = 1 [(buf.validate.field).repeated = {
+        min_items: 6,
+        max_items: 6
+    }];
+}
+
+message ListKnockoutMatchesRequest {
     string contest_slug = 1;
 }
 
-message ListMatchesResponse {
-    repeated Match matches = 1;
+message ListKnockoutMatchesResponse {
+    repeated Match matches = 1 [(buf.validate.field).repeated = {
+        min_items: 32,
+        max_items: 32
+    }];
 }
 
 message CreateMatchRequest {
@@ -22,6 +38,7 @@ message CreateMatchRequest {
 message CreateMatchResponse {}
 
 service MatchService {
-    rpc ListMatches(ListMatchesRequest) returns (ListMatchesResponse);
+    rpc ListGroupMatches(ListGroupMatchesRequest) returns (ListGroupMatchesResponse);
+    rpc ListKnockoutMatches(ListKnockoutMatchesRequest) returns (ListKnockoutMatchesResponse);
     rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
 }
