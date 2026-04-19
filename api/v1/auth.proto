@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package api.v1;
+
+option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
+
+import "api/v1/types.proto";
+
+message LoginRequest {
+    string google_id_token = 1;
+    optional string username = 2;
+}
+
+message LoginResponse {
+    string access_token = 1;
+    User user = 2;
+}
+
+service AuthService {
+    rpc Login(LoginRequest) returns (LoginResponse);
+}
