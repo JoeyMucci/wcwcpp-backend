@@ -45,7 +45,7 @@ var (
 
 // UsersServiceClient is a client for the api.v1.UsersService service.
 type UsersServiceClient interface {
-	CountUsers(context.Context, *connect.Request[v1.UsersRequest]) (*connect.Response[v1.UsersResponse], error)
+	CountUsers(context.Context, *connect.Request[v1.CountUsersRequest]) (*connect.Response[v1.CountUsersResponse], error)
 }
 
 // NewUsersServiceClient constructs a client for the api.v1.UsersService service. By default, it
@@ -58,7 +58,7 @@ type UsersServiceClient interface {
 func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) UsersServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &usersServiceClient{
-		countUsers: connect.NewClient[v1.UsersRequest, v1.UsersResponse](
+		countUsers: connect.NewClient[v1.CountUsersRequest, v1.CountUsersResponse](
 			httpClient,
 			baseURL+UsersServiceCountUsersProcedure,
 			connect.WithSchema(usersServiceCountUsersMethodDescriptor),
@@ -69,17 +69,17 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // usersServiceClient implements UsersServiceClient.
 type usersServiceClient struct {
-	countUsers *connect.Client[v1.UsersRequest, v1.UsersResponse]
+	countUsers *connect.Client[v1.CountUsersRequest, v1.CountUsersResponse]
 }
 
 // CountUsers calls api.v1.UsersService.CountUsers.
-func (c *usersServiceClient) CountUsers(ctx context.Context, req *connect.Request[v1.UsersRequest]) (*connect.Response[v1.UsersResponse], error) {
+func (c *usersServiceClient) CountUsers(ctx context.Context, req *connect.Request[v1.CountUsersRequest]) (*connect.Response[v1.CountUsersResponse], error) {
 	return c.countUsers.CallUnary(ctx, req)
 }
 
 // UsersServiceHandler is an implementation of the api.v1.UsersService service.
 type UsersServiceHandler interface {
-	CountUsers(context.Context, *connect.Request[v1.UsersRequest]) (*connect.Response[v1.UsersResponse], error)
+	CountUsers(context.Context, *connect.Request[v1.CountUsersRequest]) (*connect.Response[v1.CountUsersResponse], error)
 }
 
 // NewUsersServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -107,6 +107,6 @@ func NewUsersServiceHandler(svc UsersServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedUsersServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedUsersServiceHandler struct{}
 
-func (UnimplementedUsersServiceHandler) CountUsers(context.Context, *connect.Request[v1.UsersRequest]) (*connect.Response[v1.UsersResponse], error) {
+func (UnimplementedUsersServiceHandler) CountUsers(context.Context, *connect.Request[v1.CountUsersRequest]) (*connect.Response[v1.CountUsersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.UsersService.CountUsers is not implemented"))
 }

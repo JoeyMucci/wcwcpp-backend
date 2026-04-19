@@ -33,9 +33,12 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// MatchServiceListMatchesProcedure is the fully-qualified name of the MatchService's ListMatches
-	// RPC.
-	MatchServiceListMatchesProcedure = "/api.v1.MatchService/ListMatches"
+	// MatchServiceListGroupMatchesProcedure is the fully-qualified name of the MatchService's
+	// ListGroupMatches RPC.
+	MatchServiceListGroupMatchesProcedure = "/api.v1.MatchService/ListGroupMatches"
+	// MatchServiceListKnockoutMatchesProcedure is the fully-qualified name of the MatchService's
+	// ListKnockoutMatches RPC.
+	MatchServiceListKnockoutMatchesProcedure = "/api.v1.MatchService/ListKnockoutMatches"
 	// MatchServiceCreateMatchProcedure is the fully-qualified name of the MatchService's CreateMatch
 	// RPC.
 	MatchServiceCreateMatchProcedure = "/api.v1.MatchService/CreateMatch"
@@ -43,14 +46,16 @@ const (
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	matchServiceServiceDescriptor           = v1.File_api_v1_matches_proto.Services().ByName("MatchService")
-	matchServiceListMatchesMethodDescriptor = matchServiceServiceDescriptor.Methods().ByName("ListMatches")
-	matchServiceCreateMatchMethodDescriptor = matchServiceServiceDescriptor.Methods().ByName("CreateMatch")
+	matchServiceServiceDescriptor                   = v1.File_api_v1_matches_proto.Services().ByName("MatchService")
+	matchServiceListGroupMatchesMethodDescriptor    = matchServiceServiceDescriptor.Methods().ByName("ListGroupMatches")
+	matchServiceListKnockoutMatchesMethodDescriptor = matchServiceServiceDescriptor.Methods().ByName("ListKnockoutMatches")
+	matchServiceCreateMatchMethodDescriptor         = matchServiceServiceDescriptor.Methods().ByName("CreateMatch")
 )
 
 // MatchServiceClient is a client for the api.v1.MatchService service.
 type MatchServiceClient interface {
-	ListMatches(context.Context, *connect.Request[v1.MatchesRequest]) (*connect.Response[v1.MatchesResponse], error)
+	ListGroupMatches(context.Context, *connect.Request[v1.ListGroupMatchesRequest]) (*connect.Response[v1.ListGroupMatchesResponse], error)
+	ListKnockoutMatches(context.Context, *connect.Request[v1.ListKnockoutMatchesRequest]) (*connect.Response[v1.ListKnockoutMatchesResponse], error)
 	CreateMatch(context.Context, *connect.Request[v1.CreateMatchRequest]) (*connect.Response[v1.CreateMatchResponse], error)
 }
 
@@ -64,10 +69,16 @@ type MatchServiceClient interface {
 func NewMatchServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) MatchServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &matchServiceClient{
-		listMatches: connect.NewClient[v1.MatchesRequest, v1.MatchesResponse](
+		listGroupMatches: connect.NewClient[v1.ListGroupMatchesRequest, v1.ListGroupMatchesResponse](
 			httpClient,
-			baseURL+MatchServiceListMatchesProcedure,
-			connect.WithSchema(matchServiceListMatchesMethodDescriptor),
+			baseURL+MatchServiceListGroupMatchesProcedure,
+			connect.WithSchema(matchServiceListGroupMatchesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listKnockoutMatches: connect.NewClient[v1.ListKnockoutMatchesRequest, v1.ListKnockoutMatchesResponse](
+			httpClient,
+			baseURL+MatchServiceListKnockoutMatchesProcedure,
+			connect.WithSchema(matchServiceListKnockoutMatchesMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		createMatch: connect.NewClient[v1.CreateMatchRequest, v1.CreateMatchResponse](
@@ -81,13 +92,19 @@ func NewMatchServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // matchServiceClient implements MatchServiceClient.
 type matchServiceClient struct {
-	listMatches *connect.Client[v1.MatchesRequest, v1.MatchesResponse]
-	createMatch *connect.Client[v1.CreateMatchRequest, v1.CreateMatchResponse]
+	listGroupMatches    *connect.Client[v1.ListGroupMatchesRequest, v1.ListGroupMatchesResponse]
+	listKnockoutMatches *connect.Client[v1.ListKnockoutMatchesRequest, v1.ListKnockoutMatchesResponse]
+	createMatch         *connect.Client[v1.CreateMatchRequest, v1.CreateMatchResponse]
 }
 
-// ListMatches calls api.v1.MatchService.ListMatches.
-func (c *matchServiceClient) ListMatches(ctx context.Context, req *connect.Request[v1.MatchesRequest]) (*connect.Response[v1.MatchesResponse], error) {
-	return c.listMatches.CallUnary(ctx, req)
+// ListGroupMatches calls api.v1.MatchService.ListGroupMatches.
+func (c *matchServiceClient) ListGroupMatches(ctx context.Context, req *connect.Request[v1.ListGroupMatchesRequest]) (*connect.Response[v1.ListGroupMatchesResponse], error) {
+	return c.listGroupMatches.CallUnary(ctx, req)
+}
+
+// ListKnockoutMatches calls api.v1.MatchService.ListKnockoutMatches.
+func (c *matchServiceClient) ListKnockoutMatches(ctx context.Context, req *connect.Request[v1.ListKnockoutMatchesRequest]) (*connect.Response[v1.ListKnockoutMatchesResponse], error) {
+	return c.listKnockoutMatches.CallUnary(ctx, req)
 }
 
 // CreateMatch calls api.v1.MatchService.CreateMatch.
@@ -97,7 +114,8 @@ func (c *matchServiceClient) CreateMatch(ctx context.Context, req *connect.Reque
 
 // MatchServiceHandler is an implementation of the api.v1.MatchService service.
 type MatchServiceHandler interface {
-	ListMatches(context.Context, *connect.Request[v1.MatchesRequest]) (*connect.Response[v1.MatchesResponse], error)
+	ListGroupMatches(context.Context, *connect.Request[v1.ListGroupMatchesRequest]) (*connect.Response[v1.ListGroupMatchesResponse], error)
+	ListKnockoutMatches(context.Context, *connect.Request[v1.ListKnockoutMatchesRequest]) (*connect.Response[v1.ListKnockoutMatchesResponse], error)
 	CreateMatch(context.Context, *connect.Request[v1.CreateMatchRequest]) (*connect.Response[v1.CreateMatchResponse], error)
 }
 
@@ -107,10 +125,16 @@ type MatchServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewMatchServiceHandler(svc MatchServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	matchServiceListMatchesHandler := connect.NewUnaryHandler(
-		MatchServiceListMatchesProcedure,
-		svc.ListMatches,
-		connect.WithSchema(matchServiceListMatchesMethodDescriptor),
+	matchServiceListGroupMatchesHandler := connect.NewUnaryHandler(
+		MatchServiceListGroupMatchesProcedure,
+		svc.ListGroupMatches,
+		connect.WithSchema(matchServiceListGroupMatchesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	matchServiceListKnockoutMatchesHandler := connect.NewUnaryHandler(
+		MatchServiceListKnockoutMatchesProcedure,
+		svc.ListKnockoutMatches,
+		connect.WithSchema(matchServiceListKnockoutMatchesMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	matchServiceCreateMatchHandler := connect.NewUnaryHandler(
@@ -121,8 +145,10 @@ func NewMatchServiceHandler(svc MatchServiceHandler, opts ...connect.HandlerOpti
 	)
 	return "/api.v1.MatchService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case MatchServiceListMatchesProcedure:
-			matchServiceListMatchesHandler.ServeHTTP(w, r)
+		case MatchServiceListGroupMatchesProcedure:
+			matchServiceListGroupMatchesHandler.ServeHTTP(w, r)
+		case MatchServiceListKnockoutMatchesProcedure:
+			matchServiceListKnockoutMatchesHandler.ServeHTTP(w, r)
 		case MatchServiceCreateMatchProcedure:
 			matchServiceCreateMatchHandler.ServeHTTP(w, r)
 		default:
@@ -134,8 +160,12 @@ func NewMatchServiceHandler(svc MatchServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedMatchServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedMatchServiceHandler struct{}
 
-func (UnimplementedMatchServiceHandler) ListMatches(context.Context, *connect.Request[v1.MatchesRequest]) (*connect.Response[v1.MatchesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.MatchService.ListMatches is not implemented"))
+func (UnimplementedMatchServiceHandler) ListGroupMatches(context.Context, *connect.Request[v1.ListGroupMatchesRequest]) (*connect.Response[v1.ListGroupMatchesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.MatchService.ListGroupMatches is not implemented"))
+}
+
+func (UnimplementedMatchServiceHandler) ListKnockoutMatches(context.Context, *connect.Request[v1.ListKnockoutMatchesRequest]) (*connect.Response[v1.ListKnockoutMatchesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.MatchService.ListKnockoutMatches is not implemented"))
 }
 
 func (UnimplementedMatchServiceHandler) CreateMatch(context.Context, *connect.Request[v1.CreateMatchRequest]) (*connect.Response[v1.CreateMatchResponse], error) {

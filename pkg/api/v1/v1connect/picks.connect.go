@@ -58,9 +58,9 @@ var (
 
 // PicksServiceClient is a client for the api.v1.PicksService service.
 type PicksServiceClient interface {
-	ListGroupPicks(context.Context, *connect.Request[v1.GroupPicksRequest]) (*connect.Response[v1.GroupPicksResponse], error)
+	ListGroupPicks(context.Context, *connect.Request[v1.ListGroupPicksRequest]) (*connect.Response[v1.ListGroupPicksResponse], error)
 	CreateGroupPicks(context.Context, *connect.Request[v1.CreateGroupPicksRequest]) (*connect.Response[v1.CreateGroupPicksResponse], error)
-	ListKnockoutPicks(context.Context, *connect.Request[v1.KnockoutPicksRequest]) (*connect.Response[v1.KnockoutPicksResponse], error)
+	ListKnockoutPicks(context.Context, *connect.Request[v1.ListKnockoutPicksRequest]) (*connect.Response[v1.ListKnockoutPicksResponse], error)
 	CreateKnockoutPicks(context.Context, *connect.Request[v1.CreateKnockoutPicksRequest]) (*connect.Response[v1.CreateKnockoutPicksResponse], error)
 }
 
@@ -74,7 +74,7 @@ type PicksServiceClient interface {
 func NewPicksServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) PicksServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &picksServiceClient{
-		listGroupPicks: connect.NewClient[v1.GroupPicksRequest, v1.GroupPicksResponse](
+		listGroupPicks: connect.NewClient[v1.ListGroupPicksRequest, v1.ListGroupPicksResponse](
 			httpClient,
 			baseURL+PicksServiceListGroupPicksProcedure,
 			connect.WithSchema(picksServiceListGroupPicksMethodDescriptor),
@@ -86,7 +86,7 @@ func NewPicksServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(picksServiceCreateGroupPicksMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		listKnockoutPicks: connect.NewClient[v1.KnockoutPicksRequest, v1.KnockoutPicksResponse](
+		listKnockoutPicks: connect.NewClient[v1.ListKnockoutPicksRequest, v1.ListKnockoutPicksResponse](
 			httpClient,
 			baseURL+PicksServiceListKnockoutPicksProcedure,
 			connect.WithSchema(picksServiceListKnockoutPicksMethodDescriptor),
@@ -103,14 +103,14 @@ func NewPicksServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // picksServiceClient implements PicksServiceClient.
 type picksServiceClient struct {
-	listGroupPicks      *connect.Client[v1.GroupPicksRequest, v1.GroupPicksResponse]
+	listGroupPicks      *connect.Client[v1.ListGroupPicksRequest, v1.ListGroupPicksResponse]
 	createGroupPicks    *connect.Client[v1.CreateGroupPicksRequest, v1.CreateGroupPicksResponse]
-	listKnockoutPicks   *connect.Client[v1.KnockoutPicksRequest, v1.KnockoutPicksResponse]
+	listKnockoutPicks   *connect.Client[v1.ListKnockoutPicksRequest, v1.ListKnockoutPicksResponse]
 	createKnockoutPicks *connect.Client[v1.CreateKnockoutPicksRequest, v1.CreateKnockoutPicksResponse]
 }
 
 // ListGroupPicks calls api.v1.PicksService.ListGroupPicks.
-func (c *picksServiceClient) ListGroupPicks(ctx context.Context, req *connect.Request[v1.GroupPicksRequest]) (*connect.Response[v1.GroupPicksResponse], error) {
+func (c *picksServiceClient) ListGroupPicks(ctx context.Context, req *connect.Request[v1.ListGroupPicksRequest]) (*connect.Response[v1.ListGroupPicksResponse], error) {
 	return c.listGroupPicks.CallUnary(ctx, req)
 }
 
@@ -120,7 +120,7 @@ func (c *picksServiceClient) CreateGroupPicks(ctx context.Context, req *connect.
 }
 
 // ListKnockoutPicks calls api.v1.PicksService.ListKnockoutPicks.
-func (c *picksServiceClient) ListKnockoutPicks(ctx context.Context, req *connect.Request[v1.KnockoutPicksRequest]) (*connect.Response[v1.KnockoutPicksResponse], error) {
+func (c *picksServiceClient) ListKnockoutPicks(ctx context.Context, req *connect.Request[v1.ListKnockoutPicksRequest]) (*connect.Response[v1.ListKnockoutPicksResponse], error) {
 	return c.listKnockoutPicks.CallUnary(ctx, req)
 }
 
@@ -131,9 +131,9 @@ func (c *picksServiceClient) CreateKnockoutPicks(ctx context.Context, req *conne
 
 // PicksServiceHandler is an implementation of the api.v1.PicksService service.
 type PicksServiceHandler interface {
-	ListGroupPicks(context.Context, *connect.Request[v1.GroupPicksRequest]) (*connect.Response[v1.GroupPicksResponse], error)
+	ListGroupPicks(context.Context, *connect.Request[v1.ListGroupPicksRequest]) (*connect.Response[v1.ListGroupPicksResponse], error)
 	CreateGroupPicks(context.Context, *connect.Request[v1.CreateGroupPicksRequest]) (*connect.Response[v1.CreateGroupPicksResponse], error)
-	ListKnockoutPicks(context.Context, *connect.Request[v1.KnockoutPicksRequest]) (*connect.Response[v1.KnockoutPicksResponse], error)
+	ListKnockoutPicks(context.Context, *connect.Request[v1.ListKnockoutPicksRequest]) (*connect.Response[v1.ListKnockoutPicksResponse], error)
 	CreateKnockoutPicks(context.Context, *connect.Request[v1.CreateKnockoutPicksRequest]) (*connect.Response[v1.CreateKnockoutPicksResponse], error)
 }
 
@@ -186,7 +186,7 @@ func NewPicksServiceHandler(svc PicksServiceHandler, opts ...connect.HandlerOpti
 // UnimplementedPicksServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPicksServiceHandler struct{}
 
-func (UnimplementedPicksServiceHandler) ListGroupPicks(context.Context, *connect.Request[v1.GroupPicksRequest]) (*connect.Response[v1.GroupPicksResponse], error) {
+func (UnimplementedPicksServiceHandler) ListGroupPicks(context.Context, *connect.Request[v1.ListGroupPicksRequest]) (*connect.Response[v1.ListGroupPicksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.PicksService.ListGroupPicks is not implemented"))
 }
 
@@ -194,7 +194,7 @@ func (UnimplementedPicksServiceHandler) CreateGroupPicks(context.Context, *conne
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.PicksService.CreateGroupPicks is not implemented"))
 }
 
-func (UnimplementedPicksServiceHandler) ListKnockoutPicks(context.Context, *connect.Request[v1.KnockoutPicksRequest]) (*connect.Response[v1.KnockoutPicksResponse], error) {
+func (UnimplementedPicksServiceHandler) ListKnockoutPicks(context.Context, *connect.Request[v1.ListKnockoutPicksRequest]) (*connect.Response[v1.ListKnockoutPicksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.PicksService.ListKnockoutPicks is not implemented"))
 }
 

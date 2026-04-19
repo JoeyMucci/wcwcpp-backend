@@ -11,14 +11,14 @@ import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
  */
 export class Contest extends Message<Contest> {
   /**
-   * @generated from field: string slug = 1;
+   * @generated from field: string title = 1;
    */
-  slug = "";
+  title = "";
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string slug = 2;
    */
-  name = "";
+  slug = "";
 
   /**
    * @generated from field: bool active = 3;
@@ -33,8 +33,8 @@ export class Contest extends Message<Contest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.Contest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
@@ -64,6 +64,11 @@ export class Country extends Message<Country> {
    */
   code = "";
 
+  /**
+   * @generated from field: string full_name = 2;
+   */
+  fullName = "";
+
   constructor(data?: PartialMessage<Country>) {
     super();
     proto3.util.initPartial(data, this);
@@ -73,6 +78,7 @@ export class Country extends Message<Country> {
   static readonly typeName = "api.v1.Country";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "full_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Country {
@@ -263,12 +269,12 @@ export class KnockoutPick extends Message<KnockoutPick> {
  */
 export class Match extends Message<Match> {
   /**
-   * @generated from field: api.v1.Country country1 = 1;
+   * @generated from field: optional api.v1.Country country1 = 1;
    */
   country1?: Country;
 
   /**
-   * @generated from field: api.v1.Country country2 = 2;
+   * @generated from field: optional api.v1.Country country2 = 2;
    */
   country2?: Country;
 
@@ -300,8 +306,8 @@ export class Match extends Message<Match> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.Match";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "country1", kind: "message", T: Country },
-    { no: 2, name: "country2", kind: "message", T: Country },
+    { no: 1, name: "country1", kind: "message", T: Country, opt: true },
+    { no: 2, name: "country2", kind: "message", T: Country, opt: true },
     { no: 4, name: "country1_goals", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 5, name: "country2_goals", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 6, name: "country1_penalties", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },

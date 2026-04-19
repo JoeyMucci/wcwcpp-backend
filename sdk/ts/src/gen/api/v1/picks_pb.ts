@@ -8,76 +8,76 @@ import { Message, proto3 } from "@bufbuild/protobuf";
 import { GroupPick, KnockoutPick } from "./types_pb.js";
 
 /**
- * @generated from message api.v1.GroupPicksRequest
+ * @generated from message api.v1.ListGroupPicksRequest
  */
-export class GroupPicksRequest extends Message<GroupPicksRequest> {
+export class ListGroupPicksRequest extends Message<ListGroupPicksRequest> {
   /**
    * @generated from field: string contest_slug = 1;
    */
   contestSlug = "";
 
-  constructor(data?: PartialMessage<GroupPicksRequest>) {
+  constructor(data?: PartialMessage<ListGroupPicksRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.GroupPicksRequest";
+  static readonly typeName = "api.v1.ListGroupPicksRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GroupPicksRequest {
-    return new GroupPicksRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListGroupPicksRequest {
+    return new ListGroupPicksRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GroupPicksRequest {
-    return new GroupPicksRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListGroupPicksRequest {
+    return new ListGroupPicksRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GroupPicksRequest {
-    return new GroupPicksRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListGroupPicksRequest {
+    return new ListGroupPicksRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GroupPicksRequest | PlainMessage<GroupPicksRequest> | undefined, b: GroupPicksRequest | PlainMessage<GroupPicksRequest> | undefined): boolean {
-    return proto3.util.equals(GroupPicksRequest, a, b);
+  static equals(a: ListGroupPicksRequest | PlainMessage<ListGroupPicksRequest> | undefined, b: ListGroupPicksRequest | PlainMessage<ListGroupPicksRequest> | undefined): boolean {
+    return proto3.util.equals(ListGroupPicksRequest, a, b);
   }
 }
 
 /**
- * @generated from message api.v1.GroupPicksResponse
+ * @generated from message api.v1.ListGroupPicksResponse
  */
-export class GroupPicksResponse extends Message<GroupPicksResponse> {
+export class ListGroupPicksResponse extends Message<ListGroupPicksResponse> {
   /**
    * @generated from field: repeated api.v1.GroupPick picks = 1;
    */
   picks: GroupPick[] = [];
 
-  constructor(data?: PartialMessage<GroupPicksResponse>) {
+  constructor(data?: PartialMessage<ListGroupPicksResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.GroupPicksResponse";
+  static readonly typeName = "api.v1.ListGroupPicksResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "picks", kind: "message", T: GroupPick, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GroupPicksResponse {
-    return new GroupPicksResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListGroupPicksResponse {
+    return new ListGroupPicksResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GroupPicksResponse {
-    return new GroupPicksResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListGroupPicksResponse {
+    return new ListGroupPicksResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GroupPicksResponse {
-    return new GroupPicksResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListGroupPicksResponse {
+    return new ListGroupPicksResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GroupPicksResponse | PlainMessage<GroupPicksResponse> | undefined, b: GroupPicksResponse | PlainMessage<GroupPicksResponse> | undefined): boolean {
-    return proto3.util.equals(GroupPicksResponse, a, b);
+  static equals(a: ListGroupPicksResponse | PlainMessage<ListGroupPicksResponse> | undefined, b: ListGroupPicksResponse | PlainMessage<ListGroupPicksResponse> | undefined): boolean {
+    return proto3.util.equals(ListGroupPicksResponse, a, b);
   }
 }
 
@@ -156,76 +156,76 @@ export class CreateGroupPicksResponse extends Message<CreateGroupPicksResponse> 
 }
 
 /**
- * @generated from message api.v1.KnockoutPicksRequest
+ * @generated from message api.v1.ListKnockoutPicksRequest
  */
-export class KnockoutPicksRequest extends Message<KnockoutPicksRequest> {
+export class ListKnockoutPicksRequest extends Message<ListKnockoutPicksRequest> {
   /**
    * @generated from field: string contest_slug = 1;
    */
   contestSlug = "";
 
-  constructor(data?: PartialMessage<KnockoutPicksRequest>) {
+  constructor(data?: PartialMessage<ListKnockoutPicksRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.KnockoutPicksRequest";
+  static readonly typeName = "api.v1.ListKnockoutPicksRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KnockoutPicksRequest {
-    return new KnockoutPicksRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListKnockoutPicksRequest {
+    return new ListKnockoutPicksRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KnockoutPicksRequest {
-    return new KnockoutPicksRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListKnockoutPicksRequest {
+    return new ListKnockoutPicksRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KnockoutPicksRequest {
-    return new KnockoutPicksRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListKnockoutPicksRequest {
+    return new ListKnockoutPicksRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: KnockoutPicksRequest | PlainMessage<KnockoutPicksRequest> | undefined, b: KnockoutPicksRequest | PlainMessage<KnockoutPicksRequest> | undefined): boolean {
-    return proto3.util.equals(KnockoutPicksRequest, a, b);
+  static equals(a: ListKnockoutPicksRequest | PlainMessage<ListKnockoutPicksRequest> | undefined, b: ListKnockoutPicksRequest | PlainMessage<ListKnockoutPicksRequest> | undefined): boolean {
+    return proto3.util.equals(ListKnockoutPicksRequest, a, b);
   }
 }
 
 /**
- * @generated from message api.v1.KnockoutPicksResponse
+ * @generated from message api.v1.ListKnockoutPicksResponse
  */
-export class KnockoutPicksResponse extends Message<KnockoutPicksResponse> {
+export class ListKnockoutPicksResponse extends Message<ListKnockoutPicksResponse> {
   /**
    * @generated from field: repeated api.v1.KnockoutPick picks = 1;
    */
   picks: KnockoutPick[] = [];
 
-  constructor(data?: PartialMessage<KnockoutPicksResponse>) {
+  constructor(data?: PartialMessage<ListKnockoutPicksResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.KnockoutPicksResponse";
+  static readonly typeName = "api.v1.ListKnockoutPicksResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "picks", kind: "message", T: KnockoutPick, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): KnockoutPicksResponse {
-    return new KnockoutPicksResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListKnockoutPicksResponse {
+    return new ListKnockoutPicksResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): KnockoutPicksResponse {
-    return new KnockoutPicksResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListKnockoutPicksResponse {
+    return new ListKnockoutPicksResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): KnockoutPicksResponse {
-    return new KnockoutPicksResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListKnockoutPicksResponse {
+    return new ListKnockoutPicksResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: KnockoutPicksResponse | PlainMessage<KnockoutPicksResponse> | undefined, b: KnockoutPicksResponse | PlainMessage<KnockoutPicksResponse> | undefined): boolean {
-    return proto3.util.equals(KnockoutPicksResponse, a, b);
+  static equals(a: ListKnockoutPicksResponse | PlainMessage<ListKnockoutPicksResponse> | undefined, b: ListKnockoutPicksResponse | PlainMessage<ListKnockoutPicksResponse> | undefined): boolean {
+    return proto3.util.equals(ListKnockoutPicksResponse, a, b);
   }
 }
 

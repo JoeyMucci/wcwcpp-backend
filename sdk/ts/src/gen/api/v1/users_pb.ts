@@ -7,70 +7,70 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 
 /**
- * @generated from message api.v1.UsersRequest
+ * @generated from message api.v1.CountUsersRequest
  */
-export class UsersRequest extends Message<UsersRequest> {
-  constructor(data?: PartialMessage<UsersRequest>) {
+export class CountUsersRequest extends Message<CountUsersRequest> {
+  constructor(data?: PartialMessage<CountUsersRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.UsersRequest";
+  static readonly typeName = "api.v1.CountUsersRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UsersRequest {
-    return new UsersRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CountUsersRequest {
+    return new CountUsersRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UsersRequest {
-    return new UsersRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CountUsersRequest {
+    return new CountUsersRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UsersRequest {
-    return new UsersRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CountUsersRequest {
+    return new CountUsersRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UsersRequest | PlainMessage<UsersRequest> | undefined, b: UsersRequest | PlainMessage<UsersRequest> | undefined): boolean {
-    return proto3.util.equals(UsersRequest, a, b);
+  static equals(a: CountUsersRequest | PlainMessage<CountUsersRequest> | undefined, b: CountUsersRequest | PlainMessage<CountUsersRequest> | undefined): boolean {
+    return proto3.util.equals(CountUsersRequest, a, b);
   }
 }
 
 /**
- * @generated from message api.v1.UsersResponse
+ * @generated from message api.v1.CountUsersResponse
  */
-export class UsersResponse extends Message<UsersResponse> {
+export class CountUsersResponse extends Message<CountUsersResponse> {
   /**
    * @generated from field: int64 count = 1;
    */
   count = protoInt64.zero;
 
-  constructor(data?: PartialMessage<UsersResponse>) {
+  constructor(data?: PartialMessage<CountUsersResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "api.v1.UsersResponse";
+  static readonly typeName = "api.v1.CountUsersResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UsersResponse {
-    return new UsersResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CountUsersResponse {
+    return new CountUsersResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UsersResponse {
-    return new UsersResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CountUsersResponse {
+    return new CountUsersResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UsersResponse {
-    return new UsersResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CountUsersResponse {
+    return new CountUsersResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UsersResponse | PlainMessage<UsersResponse> | undefined, b: UsersResponse | PlainMessage<UsersResponse> | undefined): boolean {
-    return proto3.util.equals(UsersResponse, a, b);
+  static equals(a: CountUsersResponse | PlainMessage<CountUsersResponse> | undefined, b: CountUsersResponse | PlainMessage<CountUsersResponse> | undefined): boolean {
+    return proto3.util.equals(CountUsersResponse, a, b);
   }
 }
 

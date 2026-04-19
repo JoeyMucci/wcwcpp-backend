@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ContestsRequest, ContestsResponse, CreateSubcontestRequest, CreateSubcontestResponse, DeleteSubcontestRequest, DeleteSubcontestResponse, SubcontestsRequest, SubcontestsResponse } from "./contests_pb.js";
+import { CreateSubcontestRequest, CreateSubcontestResponse, DeleteSubcontestRequest, DeleteSubcontestResponse, ListContestsRequest, ListContestsResponse, ListSubcontestsRequest, ListSubcontestsResponse } from "./contests_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -17,8 +17,8 @@ export const ContestService = {
      */
     listContests: {
       name: "ListContests",
-      I: ContestsRequest,
-      O: ContestsResponse,
+      I: ListContestsRequest,
+      O: ListContestsResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -26,8 +26,8 @@ export const ContestService = {
      */
     listSubcontests: {
       name: "ListSubcontests",
-      I: SubcontestsRequest,
-      O: SubcontestsResponse,
+      I: ListSubcontestsRequest,
+      O: ListSubcontestsResponse,
       kind: MethodKind.Unary,
     },
     /**

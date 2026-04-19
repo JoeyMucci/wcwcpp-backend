@@ -14,7 +14,7 @@ message ListContestsResponse {
 }
 
 message CreateContestRequest {
-    string name = 1;
+    string title = 1;
     repeated Group groups = 2 [(buf.validate.field).repeated = {
         min_items: 12,
         max_items: 12
@@ -32,17 +32,25 @@ message ListSubcontestsResponse {
 }
 
 message CreateSubcontestRequest {
-    string subcontest_slug = 1;
-    string name = 2;
+    string contest_slug = 1;
+    string subcontest_title = 2;
 }
 
-message CreateSubcontestResponse {}
+message CreateSubcontestResponse {
+    string join_code = 1;
+}
 
 message DeleteSubcontestRequest {
     string subcontest_slug = 1;
 }
 
 message DeleteSubcontestResponse {}
+
+message JoinSubcontestRequest {
+    string join_code = 1;
+}
+
+message JoinSubcontestResponse {}
 
 service ContestService {
     rpc ListContests(ListContestsRequest) returns (ListContestsResponse);
