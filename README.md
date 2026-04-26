@@ -61,7 +61,7 @@ To test endpoints that are restricted to superadmins (e.g., creating a contest),
 
 Example `.env`:
 ```env
-SUPERADMIN_EMAILS=superadmin@example.com,jmucci314@gmail.com
+SUPERADMIN_EMAILS=superadmin@example.com
 JWT_SECRET=your_jwt_secret
 ```
 
