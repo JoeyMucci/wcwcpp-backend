@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/joey/wcwcpp-backend/core/entity"
 	v1 "github.com/joey/wcwcpp-backend/pkg/api/v1"
 	"github.com/joey/wcwcpp-backend/ports"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func generateTestToken(secret, userID, email string) string {
@@ -92,6 +94,14 @@ func TestContestHandler_CreateContest(t *testing.T) {
 	superToken := generateTestToken("test_secret", "user1", "super1@example.com")
 	normalToken := generateTestToken("test_secret", "user2", "normal@example.com")
 
+	const (
+		testContestTitle = "Test Contest"
+		testGroupLetter  = "A"
+		testCountryCode  = "USA"
+		testCountryName  = "United States"
+	)
+	var testTime = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
 	tests := []struct {
 		name        string
 		token       string
@@ -103,6 +113,44 @@ func TestContestHandler_CreateContest(t *testing.T) {
 			name:  "success superadmin",
 			token: superToken,
 			mockFunc: func(ctx context.Context, contest entity.Contest) error {
+				return nil
+			},
+			expectError: false,
+		},
+		{
+			name:  "validates entity mapping",
+			token: superToken,
+			mockFunc: func(ctx context.Context, contest entity.Contest) error {
+				if contest.Title != testContestTitle {
+					return fmt.Errorf("expected title '%s', got %q", testContestTitle, contest.Title)
+				}
+				if len(contest.Groups) != 1 {
+					return fmt.Errorf("expected 1 group, got %d", len(contest.Groups))
+				}
+				if contest.Groups[0].Letter != testGroupLetter {
+					return fmt.Errorf("expected group letter '%s', got %q", testGroupLetter, contest.Groups[0].Letter)
+				}
+				if len(contest.Groups[0].Countries) != 1 {
+					return fmt.Errorf("expected 1 country, got %d", len(contest.Groups[0].Countries))
+				}
+				if contest.Groups[0].Countries[0].Code != testCountryCode {
+					return fmt.Errorf("expected country code '%s', got %q", testCountryCode, contest.Groups[0].Countries[0].Code)
+				}
+				if contest.Groups[0].Countries[0].FullName != testCountryName {
+					return fmt.Errorf("expected country name '%s', got %q", testCountryName, contest.Groups[0].Countries[0].FullName)
+				}
+				if !contest.GroupUnlockDate.Equal(testTime) {
+					return fmt.Errorf("expected group unlock date %v, got %v", testTime, contest.GroupUnlockDate)
+				}
+				if !contest.GroupLockDate.Equal(testTime) {
+					return fmt.Errorf("expected group lock date %v, got %v", testTime, contest.GroupLockDate)
+				}
+				if !contest.KnockoutUnlockDate.Equal(testTime) {
+					return fmt.Errorf("expected knockout unlock date %v, got %v", testTime, contest.KnockoutUnlockDate)
+				}
+				if !contest.KnockoutLockDate.Equal(testTime) {
+					return fmt.Errorf("expected knockout lock date %v, got %v", testTime, contest.KnockoutLockDate)
+				}
 				return nil
 			},
 			expectError: false,
@@ -133,15 +181,19 @@ func TestContestHandler_CreateContest(t *testing.T) {
 			h := NewContestHandler(svc)
 
 			req := connect.NewRequest(&v1.CreateContestRequest{
-				Title: "Test Contest",
+				Title: testContestTitle,
 				Groups: []*v1.Group{
 					{
-						Letter: "A",
+						Letter: testGroupLetter,
 						Countries: []*v1.Country{
-							{Code: "USA", FullName: "United States"},
+							{Code: testCountryCode, FullName: testCountryName},
 						},
 					},
 				},
+				GroupUnlockDate:    timestamppb.New(testTime),
+				GroupLockDate:      timestamppb.New(testTime),
+				KnockoutUnlockDate: timestamppb.New(testTime),
+				KnockoutLockDate:   timestamppb.New(testTime),
 			})
 			req.Header().Set("Authorization", "Bearer "+tt.token)
 

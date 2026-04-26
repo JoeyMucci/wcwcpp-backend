@@ -29,6 +29,51 @@ func (h *ContestHandler) ListContests(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&v1.ListContestsResponse{}), nil
 }
 
+func (h *ContestHandler) CreateContest(ctx context.Context, req *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
+		var groups []entity.Group
+		for _, g := range req.Msg.Groups {
+			var countries []entity.Country
+			for _, c := range g.Countries {
+				countries = append(countries, entity.Country{
+					Code:     c.Code,
+					FullName: c.FullName,
+				})
+			}
+			groups = append(groups, entity.Group{
+				Letter:    g.Letter,
+				Countries: countries,
+			})
+		}
+
+		contest := entity.Contest{
+			Title:  req.Msg.Title,
+			Groups: groups,
+		}
+
+		if req.Msg.GroupUnlockDate != nil {
+			contest.GroupUnlockDate = req.Msg.GroupUnlockDate.AsTime()
+		}
+		if req.Msg.GroupLockDate != nil {
+			contest.GroupLockDate = req.Msg.GroupLockDate.AsTime()
+		}
+		if req.Msg.KnockoutUnlockDate != nil {
+			contest.KnockoutUnlockDate = req.Msg.KnockoutUnlockDate.AsTime()
+		}
+		if req.Msg.KnockoutLockDate != nil {
+			contest.KnockoutLockDate = req.Msg.KnockoutLockDate.AsTime()
+		}
+
+		err := h.svc.CreateContest(ctx, contest)
+		if err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&v1.CreateContestResponse{}), nil
+	}
+
+	return interceptor.WithSuperadmin(handlerFunc)(ctx, req)
+}
+
 func (h *ContestHandler) ListSubcontests(ctx context.Context, req *connect.Request[v1.ListSubcontestsRequest]) (*connect.Response[v1.ListSubcontestsResponse], error) {
 	_, err := h.svc.ListSubcontests(ctx, req.Msg.ContestSlug)
 	if err != nil {
@@ -53,36 +98,4 @@ func (h *ContestHandler) DeleteSubcontest(ctx context.Context, req *connect.Requ
 		return nil, err
 	}
 	return connect.NewResponse(&v1.DeleteSubcontestResponse{}), nil
-}
-
-func (h *ContestHandler) CreateContest(ctx context.Context, req *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
-	handlerFunc := func(ctx context.Context, req *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
-		var groups []entity.Group
-		for _, g := range req.Msg.Groups {
-			var countries []entity.Country
-			for _, c := range g.Countries {
-				countries = append(countries, entity.Country{
-					Code:     c.Code,
-					FullName: c.FullName,
-				})
-			}
-			groups = append(groups, entity.Group{
-				Letter:    g.Letter,
-				Countries: countries,
-			})
-		}
-
-		contest := entity.Contest{
-			Title:  req.Msg.Title,
-			Groups: groups,
-		}
-
-		err := h.svc.CreateContest(ctx, contest)
-		if err != nil {
-			return nil, err
-		}
-		return connect.NewResponse(&v1.CreateContestResponse{}), nil
-	}
-
-	return interceptor.WithSuperadmin(handlerFunc)(ctx, req)
 }

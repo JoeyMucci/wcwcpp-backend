@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/joey/wcwcpp-backend/core/entity"
 	"github.com/joey/wcwcpp-backend/ports"
@@ -78,6 +79,10 @@ func TestContestService_CreateContest(t *testing.T) {
 		contest := entity.Contest{
 			Title:  "2026 FIFA World Cup",
 			Groups: groups,
+			GroupUnlockDate:    time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC),
+			GroupLockDate:      time.Date(2026, 6, 11, 0, 0, 0, 0, time.UTC),
+			KnockoutUnlockDate: time.Date(2026, 6, 26, 0, 0, 0, 0, time.UTC),
+			KnockoutLockDate:   time.Date(2026, 6, 28, 0, 0, 0, 0, time.UTC),
 		}
 
 		err := svc.CreateContest(context.Background(), contest)
@@ -85,6 +90,10 @@ func TestContestService_CreateContest(t *testing.T) {
 
 		// Assert Contest was created
 		require.Equal(t, "2026 FIFA World Cup", capturedContest.Title)
+		require.Equal(t, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), capturedContest.GroupUnlockDate)
+		require.Equal(t, time.Date(2026, 6, 11, 0, 0, 0, 0, time.UTC), capturedContest.GroupLockDate)
+		require.Equal(t, time.Date(2026, 6, 26, 0, 0, 0, 0, time.UTC), capturedContest.KnockoutUnlockDate)
+		require.Equal(t, time.Date(2026, 6, 28, 0, 0, 0, 0, time.UTC), capturedContest.KnockoutLockDate)
 
 		// Assert Countries were created (12 * 4 = 48 countries)
 		require.Len(t, capturedCountries, 48)
