@@ -14,8 +14,10 @@ import (
 type Matches struct {
 	ID                uuid.UUID `sql:"primary_key"`
 	ContestID         uuid.UUID
-	Country1ID        uuid.UUID
-	Country2ID        uuid.UUID
+	Round             int32
+	RoundIndex        *int32
+	Country1ID        *uuid.UUID
+	Country2ID        *uuid.UUID
 	Country1Goals     *int32
 	Country2Goals     *int32
 	Country1Penalties *int32

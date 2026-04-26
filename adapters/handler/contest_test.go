@@ -3,20 +3,40 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/joey/wcwcpp-backend/core/entity"
-	"github.com/joey/wcwcpp-backend/pkg/api/v1"
+	v1 "github.com/joey/wcwcpp-backend/pkg/api/v1"
 	"github.com/joey/wcwcpp-backend/ports"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+func generateTestToken(secret, userID, email string) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   userID,
+		"email": email,
+		"exp":   time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, _ := token.SignedString([]byte(secret))
+	return tokenString
+}
 
 type mockContestService struct {
 	ports.ContestService
 	listContestsFunc     func(ctx context.Context) ([]entity.Contest, error)
+	createContestFunc    func(ctx context.Context, contest entity.Contest) error
 	listSubcontestsFunc  func(ctx context.Context, contestSlug string) ([]entity.Contest, error)
 	createSubcontestFunc func(ctx context.Context, contestSlug string, title string) (string, error)
 	deleteSubcontestFunc func(ctx context.Context, subcontestSlug string) error
+}
+
+func (m *mockContestService) CreateContest(ctx context.Context, contest entity.Contest) error {
+	return m.createContestFunc(ctx, contest)
 }
 
 func (m *mockContestService) ListContests(ctx context.Context) ([]entity.Contest, error) {
@@ -48,7 +68,7 @@ func TestContestHandler_ListContests(t *testing.T) {
 		{
 			name: "error",
 			mockFunc: func(ctx context.Context) ([]entity.Contest, error) {
-				return nil, errors.New("service error")
+				return nil, errors.New("error")
 			},
 			expectError: true,
 		},
@@ -58,10 +78,131 @@ func TestContestHandler_ListContests(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := &mockContestService{listContestsFunc: tt.mockFunc}
 			h := NewContestHandler(svc)
-			
+
 			_, err := h.ListContests(context.Background(), connect.NewRequest(&v1.ListContestsRequest{}))
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error %v, got %v", tt.expectError, err)
+			}
+		})
+	}
+}
+
+func TestContestHandler_CreateContest(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test_secret")
+	os.Setenv("SUPERADMIN_EMAILS", "super1@example.com")
+
+	superToken := generateTestToken("test_secret", "user1", "super1@example.com")
+	normalToken := generateTestToken("test_secret", "user2", "normal@example.com")
+
+	const (
+		testContestTitle = "Test Contest"
+		testGroupLetter  = "A"
+		testCountryCode  = "USA"
+		testCountryName  = "United States"
+	)
+	var testTime = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name        string
+		token       string
+		mockFunc    func(ctx context.Context, contest entity.Contest) error
+		expectError bool
+		errCode     connect.Code
+	}{
+		{
+			name:  "success superadmin",
+			token: superToken,
+			mockFunc: func(ctx context.Context, contest entity.Contest) error {
+				return nil
+			},
+			expectError: false,
+		},
+		{
+			name:  "validates entity mapping",
+			token: superToken,
+			mockFunc: func(ctx context.Context, contest entity.Contest) error {
+				if contest.Title != testContestTitle {
+					return fmt.Errorf("expected title '%s', got %q", testContestTitle, contest.Title)
+				}
+				if len(contest.Groups) != 1 {
+					return fmt.Errorf("expected 1 group, got %d", len(contest.Groups))
+				}
+				if contest.Groups[0].Letter != testGroupLetter {
+					return fmt.Errorf("expected group letter '%s', got %q", testGroupLetter, contest.Groups[0].Letter)
+				}
+				if len(contest.Groups[0].Countries) != 1 {
+					return fmt.Errorf("expected 1 country, got %d", len(contest.Groups[0].Countries))
+				}
+				if contest.Groups[0].Countries[0].Code != testCountryCode {
+					return fmt.Errorf("expected country code '%s', got %q", testCountryCode, contest.Groups[0].Countries[0].Code)
+				}
+				if contest.Groups[0].Countries[0].FullName != testCountryName {
+					return fmt.Errorf("expected country name '%s', got %q", testCountryName, contest.Groups[0].Countries[0].FullName)
+				}
+				if !contest.GroupUnlockDate.Equal(testTime) {
+					return fmt.Errorf("expected group unlock date %v, got %v", testTime, contest.GroupUnlockDate)
+				}
+				if !contest.GroupLockDate.Equal(testTime) {
+					return fmt.Errorf("expected group lock date %v, got %v", testTime, contest.GroupLockDate)
+				}
+				if !contest.KnockoutUnlockDate.Equal(testTime) {
+					return fmt.Errorf("expected knockout unlock date %v, got %v", testTime, contest.KnockoutUnlockDate)
+				}
+				if !contest.KnockoutLockDate.Equal(testTime) {
+					return fmt.Errorf("expected knockout lock date %v, got %v", testTime, contest.KnockoutLockDate)
+				}
+				return nil
+			},
+			expectError: false,
+		},
+		{
+			name:  "forbidden normal user",
+			token: normalToken,
+			mockFunc: func(ctx context.Context, contest entity.Contest) error {
+				return nil // Should not be called
+			},
+			expectError: true,
+			errCode:     connect.CodePermissionDenied,
+		},
+		{
+			name:  "error",
+			token: superToken,
+			mockFunc: func(ctx context.Context, contest entity.Contest) error {
+				return errors.New("error")
+			},
+			expectError: true,
+			errCode:     connect.CodeUnknown,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := &mockContestService{createContestFunc: tt.mockFunc}
+			h := NewContestHandler(svc)
+
+			req := connect.NewRequest(&v1.CreateContestRequest{
+				Title: testContestTitle,
+				Groups: []*v1.Group{
+					{
+						Letter: testGroupLetter,
+						Countries: []*v1.Country{
+							{Code: testCountryCode, FullName: testCountryName},
+						},
+					},
+				},
+				GroupUnlockDate:    timestamppb.New(testTime),
+				GroupLockDate:      timestamppb.New(testTime),
+				KnockoutUnlockDate: timestamppb.New(testTime),
+				KnockoutLockDate:   timestamppb.New(testTime),
+			})
+			req.Header().Set("Authorization", "Bearer "+tt.token)
+
+			_, err := h.CreateContest(context.Background(), req)
+			if (err != nil) != tt.expectError {
+				t.Errorf("expected error %v, got %v", tt.expectError, err)
+			}
+			if tt.expectError && tt.errCode != 0 && connect.CodeOf(err) != tt.errCode {
+				t.Errorf("expected error code %v, got %v", tt.errCode, connect.CodeOf(err))
 			}
 		})
 	}
@@ -93,7 +234,7 @@ func TestContestHandler_ListSubcontests(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := &mockContestService{listSubcontestsFunc: tt.mockFunc}
 			h := NewContestHandler(svc)
-			
+
 			_, err := h.ListSubcontests(context.Background(), connect.NewRequest(&v1.ListSubcontestsRequest{ContestSlug: "test"}))
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error %v, got %v", tt.expectError, err)
@@ -128,7 +269,7 @@ func TestContestHandler_CreateSubcontest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := &mockContestService{createSubcontestFunc: tt.mockFunc}
 			h := NewContestHandler(svc)
-			
+
 			resp, err := h.CreateSubcontest(context.Background(), connect.NewRequest(&v1.CreateSubcontestRequest{ContestSlug: "test", SubcontestTitle: "title"}))
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error %v, got %v", tt.expectError, err)
@@ -166,7 +307,7 @@ func TestContestHandler_DeleteSubcontest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := &mockContestService{deleteSubcontestFunc: tt.mockFunc}
 			h := NewContestHandler(svc)
-			
+
 			_, err := h.DeleteSubcontest(context.Background(), connect.NewRequest(&v1.DeleteSubcontestRequest{SubcontestSlug: "test"}))
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error %v, got %v", tt.expectError, err)

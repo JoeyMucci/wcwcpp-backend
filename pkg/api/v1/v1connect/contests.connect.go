@@ -36,6 +36,9 @@ const (
 	// ContestServiceListContestsProcedure is the fully-qualified name of the ContestService's
 	// ListContests RPC.
 	ContestServiceListContestsProcedure = "/api.v1.ContestService/ListContests"
+	// ContestServiceCreateContestProcedure is the fully-qualified name of the ContestService's
+	// CreateContest RPC.
+	ContestServiceCreateContestProcedure = "/api.v1.ContestService/CreateContest"
 	// ContestServiceListSubcontestsProcedure is the fully-qualified name of the ContestService's
 	// ListSubcontests RPC.
 	ContestServiceListSubcontestsProcedure = "/api.v1.ContestService/ListSubcontests"
@@ -51,6 +54,7 @@ const (
 var (
 	contestServiceServiceDescriptor                = v1.File_api_v1_contests_proto.Services().ByName("ContestService")
 	contestServiceListContestsMethodDescriptor     = contestServiceServiceDescriptor.Methods().ByName("ListContests")
+	contestServiceCreateContestMethodDescriptor    = contestServiceServiceDescriptor.Methods().ByName("CreateContest")
 	contestServiceListSubcontestsMethodDescriptor  = contestServiceServiceDescriptor.Methods().ByName("ListSubcontests")
 	contestServiceCreateSubcontestMethodDescriptor = contestServiceServiceDescriptor.Methods().ByName("CreateSubcontest")
 	contestServiceDeleteSubcontestMethodDescriptor = contestServiceServiceDescriptor.Methods().ByName("DeleteSubcontest")
@@ -59,6 +63,7 @@ var (
 // ContestServiceClient is a client for the api.v1.ContestService service.
 type ContestServiceClient interface {
 	ListContests(context.Context, *connect.Request[v1.ListContestsRequest]) (*connect.Response[v1.ListContestsResponse], error)
+	CreateContest(context.Context, *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error)
 	ListSubcontests(context.Context, *connect.Request[v1.ListSubcontestsRequest]) (*connect.Response[v1.ListSubcontestsResponse], error)
 	CreateSubcontest(context.Context, *connect.Request[v1.CreateSubcontestRequest]) (*connect.Response[v1.CreateSubcontestResponse], error)
 	DeleteSubcontest(context.Context, *connect.Request[v1.DeleteSubcontestRequest]) (*connect.Response[v1.DeleteSubcontestResponse], error)
@@ -78,6 +83,12 @@ func NewContestServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			httpClient,
 			baseURL+ContestServiceListContestsProcedure,
 			connect.WithSchema(contestServiceListContestsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		createContest: connect.NewClient[v1.CreateContestRequest, v1.CreateContestResponse](
+			httpClient,
+			baseURL+ContestServiceCreateContestProcedure,
+			connect.WithSchema(contestServiceCreateContestMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		listSubcontests: connect.NewClient[v1.ListSubcontestsRequest, v1.ListSubcontestsResponse](
@@ -104,6 +115,7 @@ func NewContestServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 // contestServiceClient implements ContestServiceClient.
 type contestServiceClient struct {
 	listContests     *connect.Client[v1.ListContestsRequest, v1.ListContestsResponse]
+	createContest    *connect.Client[v1.CreateContestRequest, v1.CreateContestResponse]
 	listSubcontests  *connect.Client[v1.ListSubcontestsRequest, v1.ListSubcontestsResponse]
 	createSubcontest *connect.Client[v1.CreateSubcontestRequest, v1.CreateSubcontestResponse]
 	deleteSubcontest *connect.Client[v1.DeleteSubcontestRequest, v1.DeleteSubcontestResponse]
@@ -112,6 +124,11 @@ type contestServiceClient struct {
 // ListContests calls api.v1.ContestService.ListContests.
 func (c *contestServiceClient) ListContests(ctx context.Context, req *connect.Request[v1.ListContestsRequest]) (*connect.Response[v1.ListContestsResponse], error) {
 	return c.listContests.CallUnary(ctx, req)
+}
+
+// CreateContest calls api.v1.ContestService.CreateContest.
+func (c *contestServiceClient) CreateContest(ctx context.Context, req *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
+	return c.createContest.CallUnary(ctx, req)
 }
 
 // ListSubcontests calls api.v1.ContestService.ListSubcontests.
@@ -132,6 +149,7 @@ func (c *contestServiceClient) DeleteSubcontest(ctx context.Context, req *connec
 // ContestServiceHandler is an implementation of the api.v1.ContestService service.
 type ContestServiceHandler interface {
 	ListContests(context.Context, *connect.Request[v1.ListContestsRequest]) (*connect.Response[v1.ListContestsResponse], error)
+	CreateContest(context.Context, *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error)
 	ListSubcontests(context.Context, *connect.Request[v1.ListSubcontestsRequest]) (*connect.Response[v1.ListSubcontestsResponse], error)
 	CreateSubcontest(context.Context, *connect.Request[v1.CreateSubcontestRequest]) (*connect.Response[v1.CreateSubcontestResponse], error)
 	DeleteSubcontest(context.Context, *connect.Request[v1.DeleteSubcontestRequest]) (*connect.Response[v1.DeleteSubcontestResponse], error)
@@ -147,6 +165,12 @@ func NewContestServiceHandler(svc ContestServiceHandler, opts ...connect.Handler
 		ContestServiceListContestsProcedure,
 		svc.ListContests,
 		connect.WithSchema(contestServiceListContestsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	contestServiceCreateContestHandler := connect.NewUnaryHandler(
+		ContestServiceCreateContestProcedure,
+		svc.CreateContest,
+		connect.WithSchema(contestServiceCreateContestMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	contestServiceListSubcontestsHandler := connect.NewUnaryHandler(
@@ -171,6 +195,8 @@ func NewContestServiceHandler(svc ContestServiceHandler, opts ...connect.Handler
 		switch r.URL.Path {
 		case ContestServiceListContestsProcedure:
 			contestServiceListContestsHandler.ServeHTTP(w, r)
+		case ContestServiceCreateContestProcedure:
+			contestServiceCreateContestHandler.ServeHTTP(w, r)
 		case ContestServiceListSubcontestsProcedure:
 			contestServiceListSubcontestsHandler.ServeHTTP(w, r)
 		case ContestServiceCreateSubcontestProcedure:
@@ -188,6 +214,10 @@ type UnimplementedContestServiceHandler struct{}
 
 func (UnimplementedContestServiceHandler) ListContests(context.Context, *connect.Request[v1.ListContestsRequest]) (*connect.Response[v1.ListContestsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.ContestService.ListContests is not implemented"))
+}
+
+func (UnimplementedContestServiceHandler) CreateContest(context.Context, *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.ContestService.CreateContest is not implemented"))
 }
 
 func (UnimplementedContestServiceHandler) ListSubcontests(context.Context, *connect.Request[v1.ListSubcontestsRequest]) (*connect.Response[v1.ListSubcontestsResponse], error) {

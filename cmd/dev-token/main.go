@@ -11,9 +11,6 @@ import (
 
 func main() {
 	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "fallback_secret_for_dev_only"
-	}
 
 	// Default to a test email, or use the first argument
 	email := "superadmin@example.com"

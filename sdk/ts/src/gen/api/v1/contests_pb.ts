@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3 } from "@bufbuild/protobuf";
+import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Contest, Group } from "./types_pb.js";
 
 /**
@@ -89,6 +89,26 @@ export class CreateContestRequest extends Message<CreateContestRequest> {
    */
   groups: Group[] = [];
 
+  /**
+   * @generated from field: google.protobuf.Timestamp group_unlock_date = 3;
+   */
+  groupUnlockDate?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp group_lock_date = 4;
+   */
+  groupLockDate?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp knockout_unlock_date = 5;
+   */
+  knockoutUnlockDate?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp knockout_lock_date = 6;
+   */
+  knockoutLockDate?: Timestamp;
+
   constructor(data?: PartialMessage<CreateContestRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -99,6 +119,10 @@ export class CreateContestRequest extends Message<CreateContestRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "groups", kind: "message", T: Group, repeated: true },
+    { no: 3, name: "group_unlock_date", kind: "message", T: Timestamp },
+    { no: 4, name: "group_lock_date", kind: "message", T: Timestamp },
+    { no: 5, name: "knockout_unlock_date", kind: "message", T: Timestamp },
+    { no: 6, name: "knockout_lock_date", kind: "message", T: Timestamp },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateContestRequest {

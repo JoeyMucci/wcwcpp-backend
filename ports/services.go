@@ -8,6 +8,7 @@ import (
 
 type ContestService interface {
 	ListContests(ctx context.Context) ([]entity.Contest, error)
+	CreateContest(ctx context.Context, contest entity.Contest) error
 	ListSubcontests(ctx context.Context, contestSlug string) ([]entity.Contest, error)
 	CreateSubcontest(ctx context.Context, contestSlug string, title string) (string, error)
 	DeleteSubcontest(ctx context.Context, subcontestSlug string) error

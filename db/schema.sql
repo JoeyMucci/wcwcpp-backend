@@ -94,8 +94,10 @@ CREATE TABLE knockout_picks (
 CREATE TABLE matches (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     contest_id UUID NOT NULL REFERENCES contests(id),
-    country1_id UUID NOT NULL REFERENCES countries(id),
-    country2_id UUID NOT NULL REFERENCES countries(id),
+    round INT NOT NULL,
+    round_index INT,
+    country1_id UUID REFERENCES countries(id),
+    country2_id UUID REFERENCES countries(id),
     country1_goals INT,
     country2_goals INT,
     country1_penalties INT,
