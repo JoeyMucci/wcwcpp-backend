@@ -27,15 +27,25 @@ func main() {
 
 	// 3. Initialize Core Services
 	authService := service.NewAuthService(userRepo, tokenValidator)
+	contestService := service.NewContestService(postgres.NewContestRepository(db))
+	usersService := service.NewUsersService()
 
 	// 4. Initialize Handlers
 	authHandler := handler.NewAuthHandler(authService)
+	contestHandler := handler.NewContestHandler(contestService)
+	usersHandler := handler.NewUsersHandler(usersService)
 
 	mux := http.NewServeMux()
 
 	// 5. Register RPC Handlers to the mux
 	authPath, authSvcHandler := v1connect.NewAuthServiceHandler(authHandler)
 	mux.Handle(authPath, authSvcHandler)
+
+	contestPath, contestSvcHandler := v1connect.NewContestServiceHandler(contestHandler)
+	mux.Handle(contestPath, contestSvcHandler)
+
+	usersPath, usersSvcHandler := v1connect.NewUsersServiceHandler(usersHandler)
+	mux.Handle(usersPath, usersSvcHandler)
 
 	fmt.Println("Starting server on :8080")
 	// Use h2c for unencrypted HTTP/2 (required for Connect without TLS)

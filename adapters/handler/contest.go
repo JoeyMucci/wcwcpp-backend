@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	"github.com/joey/wcwcpp-backend/pkg/api/v1"
+	"github.com/joey/wcwcpp-backend/adapters/interceptor"
+	"github.com/joey/wcwcpp-backend/core/entity"
+	v1 "github.com/joey/wcwcpp-backend/pkg/api/v1"
 	"github.com/joey/wcwcpp-backend/pkg/api/v1/v1connect"
 	"github.com/joey/wcwcpp-backend/ports"
 )
@@ -51,4 +53,36 @@ func (h *ContestHandler) DeleteSubcontest(ctx context.Context, req *connect.Requ
 		return nil, err
 	}
 	return connect.NewResponse(&v1.DeleteSubcontestResponse{}), nil
+}
+
+func (h *ContestHandler) CreateContest(ctx context.Context, req *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
+		var groups []entity.Group
+		for _, g := range req.Msg.Groups {
+			var countries []entity.Country
+			for _, c := range g.Countries {
+				countries = append(countries, entity.Country{
+					Code:     c.Code,
+					FullName: c.FullName,
+				})
+			}
+			groups = append(groups, entity.Group{
+				Letter:    g.Letter,
+				Countries: countries,
+			})
+		}
+
+		contest := entity.Contest{
+			Title:  req.Msg.Title,
+			Groups: groups,
+		}
+
+		err := h.svc.CreateContest(ctx, contest)
+		if err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&v1.CreateContestResponse{}), nil
+	}
+
+	return interceptor.WithSuperadmin(handlerFunc)(ctx, req)
 }

@@ -6,6 +6,7 @@ option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
 
 import "api/v1/types.proto";
 import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
 
 message ListContestsRequest {}
 
@@ -19,6 +20,10 @@ message CreateContestRequest {
         min_items: 12,
         max_items: 12
     }];
+    google.protobuf.Timestamp group_unlock_date = 3;
+    google.protobuf.Timestamp group_lock_date = 4;
+    google.protobuf.Timestamp knockout_unlock_date = 5;
+    google.protobuf.Timestamp knockout_lock_date = 6;
 }
 
 message CreateContestResponse {}
@@ -54,6 +59,7 @@ message JoinSubcontestResponse {}
 
 service ContestService {
     rpc ListContests(ListContestsRequest) returns (ListContestsResponse);
+    rpc CreateContest(CreateContestRequest) returns (CreateContestResponse);
     rpc ListSubcontests(ListSubcontestsRequest) returns (ListSubcontestsResponse);
     rpc CreateSubcontest(CreateSubcontestRequest) returns (CreateSubcontestResponse);
     rpc DeleteSubcontest(DeleteSubcontestRequest) returns (DeleteSubcontestResponse);

@@ -2,7 +2,7 @@
 -include .env
 export
 
-.PHONY: db-up db-down db-apply db-generate proto-generate
+.PHONY: db-up db-down db-apply db-generate proto-generate test test-race run
 
 # Start the database via Docker Compose
 db-up:
@@ -27,3 +27,19 @@ proto-generate:
 	@echo "Generating Protobuf code..."
 	go run github.com/bufbuild/buf/cmd/buf@latest generate
 	@echo "Done!"
+
+# Run all Go tests
+test:
+	go test -v ./...
+
+# Run all Go tests with race detector
+test-race:
+	go test -race -v ./...
+
+# Run the API server locally
+run:
+	go run cmd/server/main.go
+
+# Generate a dev token with env vars loaded. Usage: make token [EMAIL=user@example.com]
+token:
+	go run cmd/dev-token/main.go $(EMAIL)
