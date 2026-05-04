@@ -53,20 +53,50 @@ func (m *mockContestService) DeleteSubcontest(ctx context.Context, subcontestSlu
 }
 
 func TestContestHandler_ListContests(t *testing.T) {
+	now := time.Now()
+	past := now.Add(-24 * time.Hour)
+	future := now.Add(24 * time.Hour)
+	farFuture := now.Add(48 * time.Hour)
+
 	tests := []struct {
-		name        string
-		mockFunc    func(ctx context.Context) ([]entity.Contest, error)
-		expectError bool
+		name           string
+		token          string
+		mockFunc       func(ctx context.Context) ([]entity.Contest, error)
+		expectError    bool
+		expectContests []*v1.Contest
 	}{
 		{
-			name: "success",
+			name:  "success unauthenticated",
+			token: "", // explicitly testing no auth
 			mockFunc: func(ctx context.Context) ([]entity.Contest, error) {
-				return []entity.Contest{{}}, nil
+				return []entity.Contest{
+					{
+						Title: "Active Group", Slug: "active-group",
+						GroupUnlockDate: past, GroupLockDate: future,
+						KnockoutUnlockDate: farFuture, KnockoutLockDate: farFuture.Add(24 * time.Hour),
+					},
+					{
+						Title: "Inactive Past", Slug: "inactive-past",
+						GroupUnlockDate: past.Add(-48 * time.Hour), GroupLockDate: past.Add(-24 * time.Hour),
+						KnockoutUnlockDate: past.Add(-24 * time.Hour), KnockoutLockDate: past,
+					},
+					{
+						Title: "Active Knockout", Slug: "active-knockout",
+						GroupUnlockDate: past.Add(-48 * time.Hour), GroupLockDate: past.Add(-24 * time.Hour),
+						KnockoutUnlockDate: past, KnockoutLockDate: future,
+					},
+				}, nil
 			},
 			expectError: false,
+			expectContests: []*v1.Contest{
+				{Title: "Active Group", Slug: "active-group", Active: true},
+				{Title: "Inactive Past", Slug: "inactive-past", Active: false},
+				{Title: "Active Knockout", Slug: "active-knockout", Active: true},
+			},
 		},
 		{
-			name: "error",
+			name:  "error",
+			token: "",
 			mockFunc: func(ctx context.Context) ([]entity.Contest, error) {
 				return nil, errors.New("error")
 			},
@@ -79,9 +109,24 @@ func TestContestHandler_ListContests(t *testing.T) {
 			svc := &mockContestService{listContestsFunc: tt.mockFunc}
 			h := NewContestHandler(svc)
 
-			_, err := h.ListContests(context.Background(), connect.NewRequest(&v1.ListContestsRequest{}))
+			req := connect.NewRequest(&v1.ListContestsRequest{})
+			if tt.token != "" {
+				req.Header().Set("Authorization", "Bearer "+tt.token)
+			}
+
+			resp, err := h.ListContests(context.Background(), req)
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error %v, got %v", tt.expectError, err)
+			}
+			if !tt.expectError {
+				if len(resp.Msg.Contests) != len(tt.expectContests) {
+					t.Errorf("expected %d contests, got %d", len(tt.expectContests), len(resp.Msg.Contests))
+				}
+				for i, expected := range tt.expectContests {
+					if resp.Msg.Contests[i].Title != expected.Title || resp.Msg.Contests[i].Slug != expected.Slug || resp.Msg.Contests[i].Active != expected.Active {
+						t.Errorf("expected contest %v, got %v", expected, resp.Msg.Contests[i])
+					}
+				}
 			}
 		})
 	}

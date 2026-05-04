@@ -16,6 +16,7 @@ type TokenValidator interface {
 }
 
 type ContestRepository interface {
+	ListContests(ctx context.Context) ([]entity.Contest, error)
 	CreateContest(ctx context.Context, contest *entity.Contest) error
 	CreateCountries(ctx context.Context, countries []entity.Country) error
 	CreateMatches(ctx context.Context, contestID string, matches []entity.Match) error

@@ -19,7 +19,7 @@ func NewContestService(repo ports.ContestRepository) *ContestService {
 }
 
 func (s *ContestService) ListContests(ctx context.Context) ([]entity.Contest, error) {
-	return nil, nil
+	return s.repo.ListContests(ctx)
 }
 
 func (s *ContestService) CreateContest(ctx context.Context, contest entity.Contest) error {

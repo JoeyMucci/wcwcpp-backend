@@ -12,9 +12,17 @@ import (
 
 type mockContestRepository struct {
 	ports.ContestRepository
+	listContestsFunc    func(ctx context.Context) ([]entity.Contest, error)
 	createContestFunc   func(ctx context.Context, contest *entity.Contest) error
 	createCountriesFunc func(ctx context.Context, countries []entity.Country) error
 	createMatchesFunc   func(ctx context.Context, contestID string, matches []entity.Match) error
+}
+
+func (m *mockContestRepository) ListContests(ctx context.Context) ([]entity.Contest, error) {
+	if m.listContestsFunc != nil {
+		return m.listContestsFunc(ctx)
+	}
+	return nil, nil
 }
 
 func (m *mockContestRepository) CreateContest(ctx context.Context, contest *entity.Contest) error {
@@ -36,6 +44,27 @@ func (m *mockContestRepository) CreateMatches(ctx context.Context, contestID str
 		return m.createMatchesFunc(ctx, contestID, matches)
 	}
 	return nil
+}
+
+func TestContestService_ListContests(t *testing.T) {
+	t.Run("should list contests", func(t *testing.T) {
+		expectedContests := []entity.Contest{
+			{ID: "1", Title: "World Cup 2026", Slug: "world-cup-2026"},
+			{ID: "2", Title: "Euro 2024", Slug: "euro-2024"},
+		}
+
+		mockRepo := &mockContestRepository{
+			listContestsFunc: func(ctx context.Context) ([]entity.Contest, error) {
+				return expectedContests, nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		contests, err := svc.ListContests(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, expectedContests, contests)
+	})
 }
 
 func TestContestService_CreateContest(t *testing.T) {
