@@ -21,6 +21,30 @@ func NewContestRepository(db *sql.DB) *ContestRepository {
 	return &ContestRepository{db: db}
 }
 
+func (r *ContestRepository) ListContests(ctx context.Context) ([]entity.Contest, error) {
+	stmt := postgres.SELECT(table.Contests.AllColumns).FROM(table.Contests)
+	
+	var dbContests []model.Contests
+	if err := stmt.QueryContext(ctx, r.db, &dbContests); err != nil {
+		return nil, err
+	}
+	
+	var contests []entity.Contest
+	for _, c := range dbContests {
+		contests = append(contests, entity.Contest{
+			ID:                 c.ID.String(),
+			Title:              c.Title,
+			Slug:               c.Slug,
+			GroupUnlockDate:    c.GroupUnlockDate,
+			GroupLockDate:      c.GroupLockDate,
+			KnockoutUnlockDate: c.KnockoutUnlockDate,
+			KnockoutLockDate:   c.KnockoutLockDate,
+		})
+	}
+	
+	return contests, nil
+}
+
 func (r *ContestRepository) CreateContest(ctx context.Context, contest *entity.Contest) error {
 	stmt := table.Contests.INSERT(
 		table.Contests.Title,

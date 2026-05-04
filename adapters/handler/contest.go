@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/joey/wcwcpp-backend/adapters/interceptor"
@@ -22,11 +23,31 @@ func NewContestHandler(svc ports.ContestService) *ContestHandler {
 }
 
 func (h *ContestHandler) ListContests(ctx context.Context, req *connect.Request[v1.ListContestsRequest]) (*connect.Response[v1.ListContestsResponse], error) {
-	_, err := h.svc.ListContests(ctx)
-	if err != nil {
-		return nil, err
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.ListContestsRequest]) (*connect.Response[v1.ListContestsResponse], error) {
+		contests, err := h.svc.ListContests(ctx)
+		if err != nil {
+			return nil, err
+		}
+		
+		var pbContests []*v1.Contest
+		now := time.Now()
+		for _, c := range contests {
+			isActive := (now.After(c.GroupUnlockDate) && now.Before(c.GroupLockDate)) || 
+				(now.After(c.KnockoutUnlockDate) && now.Before(c.KnockoutLockDate))
+			
+			pbContests = append(pbContests, &v1.Contest{
+				Title:  c.Title,
+				Slug:   c.Slug,
+				Active: isActive,
+			})
+		}
+		
+		return connect.NewResponse(&v1.ListContestsResponse{
+			Contests: pbContests,
+		}), nil
 	}
-	return connect.NewResponse(&v1.ListContestsResponse{}), nil
+	
+	return interceptor.WithPublic(handlerFunc)(ctx, req)
 }
 
 func (h *ContestHandler) CreateContest(ctx context.Context, req *connect.Request[v1.CreateContestRequest]) (*connect.Response[v1.CreateContestResponse], error) {
