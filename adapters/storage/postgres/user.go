@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
+	"github.com/google/uuid"
 	"github.com/joey/wcwcpp-backend/adapters/storage/jet/wcwcpp/public/model"
 	"github.com/joey/wcwcpp-backend/adapters/storage/jet/wcwcpp/public/table"
 	"github.com/joey/wcwcpp-backend/core/entity"
@@ -57,4 +58,39 @@ func (r *UserRepository) CreateUser(ctx context.Context, email string, username 
 		Email:    dest.Email,
 		Username: dest.Username,
 	}, nil
+}
+
+func (r *UserRepository) CountUsers(ctx context.Context) (int64, error) {
+	var count struct {
+		Count int64 `alias:"count"`
+	}
+
+	stmt := postgres.SELECT(postgres.COUNT(table.Users.ID).AS("count")).FROM(table.Users)
+	err := stmt.QueryContext(ctx, r.db, &count)
+	if err != nil {
+		return 0, err
+	}
+	return count.Count, nil
+}
+
+func (r *UserRepository) DeleteUser(ctx context.Context, userID string) error {
+	parsedUserID := uuid.MustParse(userID)
+
+	stmt := table.Users.DELETE().
+		WHERE(table.Users.ID.EQ(postgres.UUID(parsedUserID)))
+
+	res, err := stmt.ExecContext(ctx, r.db)
+	if err != nil {
+		return err
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.New("user not found")
+	}
+
+	return nil
 }

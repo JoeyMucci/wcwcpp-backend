@@ -6,11 +6,6 @@ import (
 	"github.com/joey/wcwcpp-backend/core/entity"
 )
 
-type UserRepository interface {
-	FindByEmail(ctx context.Context, email string) (*entity.User, error)
-	CreateUser(ctx context.Context, email string, username string) (*entity.User, error)
-}
-
 type TokenValidator interface {
 	ValidateGoogleToken(ctx context.Context, token string) (email string, err error)
 }
@@ -27,4 +22,11 @@ type ContestRepository interface {
 	GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error)
 	ListSubcontests(ctx context.Context, contestID string, userID string) ([]entity.Subcontest, error)
 	DeleteSubcontest(ctx context.Context, subcontestID string) error
+}
+
+type UserRepository interface {
+	FindByEmail(ctx context.Context, email string) (*entity.User, error)
+	CreateUser(ctx context.Context, email string, username string) (*entity.User, error)
+	CountUsers(ctx context.Context) (int64, error)
+	DeleteUser(ctx context.Context, userID string) error
 }

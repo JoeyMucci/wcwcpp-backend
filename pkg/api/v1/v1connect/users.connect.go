@@ -35,17 +35,21 @@ const (
 const (
 	// UsersServiceCountUsersProcedure is the fully-qualified name of the UsersService's CountUsers RPC.
 	UsersServiceCountUsersProcedure = "/api.v1.UsersService/CountUsers"
+	// UsersServiceDeleteUserProcedure is the fully-qualified name of the UsersService's DeleteUser RPC.
+	UsersServiceDeleteUserProcedure = "/api.v1.UsersService/DeleteUser"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
 	usersServiceServiceDescriptor          = v1.File_api_v1_users_proto.Services().ByName("UsersService")
 	usersServiceCountUsersMethodDescriptor = usersServiceServiceDescriptor.Methods().ByName("CountUsers")
+	usersServiceDeleteUserMethodDescriptor = usersServiceServiceDescriptor.Methods().ByName("DeleteUser")
 )
 
 // UsersServiceClient is a client for the api.v1.UsersService service.
 type UsersServiceClient interface {
 	CountUsers(context.Context, *connect.Request[v1.CountUsersRequest]) (*connect.Response[v1.CountUsersResponse], error)
+	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 }
 
 // NewUsersServiceClient constructs a client for the api.v1.UsersService service. By default, it
@@ -64,12 +68,19 @@ func NewUsersServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(usersServiceCountUsersMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		deleteUser: connect.NewClient[v1.DeleteUserRequest, v1.DeleteUserResponse](
+			httpClient,
+			baseURL+UsersServiceDeleteUserProcedure,
+			connect.WithSchema(usersServiceDeleteUserMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // usersServiceClient implements UsersServiceClient.
 type usersServiceClient struct {
 	countUsers *connect.Client[v1.CountUsersRequest, v1.CountUsersResponse]
+	deleteUser *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
 }
 
 // CountUsers calls api.v1.UsersService.CountUsers.
@@ -77,9 +88,15 @@ func (c *usersServiceClient) CountUsers(ctx context.Context, req *connect.Reques
 	return c.countUsers.CallUnary(ctx, req)
 }
 
+// DeleteUser calls api.v1.UsersService.DeleteUser.
+func (c *usersServiceClient) DeleteUser(ctx context.Context, req *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error) {
+	return c.deleteUser.CallUnary(ctx, req)
+}
+
 // UsersServiceHandler is an implementation of the api.v1.UsersService service.
 type UsersServiceHandler interface {
 	CountUsers(context.Context, *connect.Request[v1.CountUsersRequest]) (*connect.Response[v1.CountUsersResponse], error)
+	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 }
 
 // NewUsersServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -94,10 +111,18 @@ func NewUsersServiceHandler(svc UsersServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(usersServiceCountUsersMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	usersServiceDeleteUserHandler := connect.NewUnaryHandler(
+		UsersServiceDeleteUserProcedure,
+		svc.DeleteUser,
+		connect.WithSchema(usersServiceDeleteUserMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/api.v1.UsersService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UsersServiceCountUsersProcedure:
 			usersServiceCountUsersHandler.ServeHTTP(w, r)
+		case UsersServiceDeleteUserProcedure:
+			usersServiceDeleteUserHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -109,4 +134,8 @@ type UnimplementedUsersServiceHandler struct{}
 
 func (UnimplementedUsersServiceHandler) CountUsers(context.Context, *connect.Request[v1.CountUsersRequest]) (*connect.Response[v1.CountUsersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.UsersService.CountUsers is not implemented"))
+}
+
+func (UnimplementedUsersServiceHandler) DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.UsersService.DeleteUser is not implemented"))
 }

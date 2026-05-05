@@ -2,7 +2,7 @@
 -include .env
 export
 
-.PHONY: db-up db-down db-apply db-generate proto-generate test test-race run
+.PHONY: db-up db-down db-apply db-generate proto-generate test test-race run token seed
 
 # Start the database via Docker Compose
 db-up:
@@ -43,3 +43,7 @@ run:
 # Generate a dev token with env vars loaded. Usage: make token [EMAIL=user@example.com]
 token:
 	go run cmd/dev-token/main.go $(EMAIL)
+
+# Seed the database
+seed:
+	go run cmd/seed/main.go

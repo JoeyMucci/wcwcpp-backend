@@ -10,6 +10,11 @@ message CountUsersResponse {
     int64 count = 1;
 }
 
+message DeleteUserRequest {}
+
+message DeleteUserResponse {}
+
 service UsersService {
     rpc CountUsers(CountUsersRequest) returns (CountUsersResponse);
+    rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
 }

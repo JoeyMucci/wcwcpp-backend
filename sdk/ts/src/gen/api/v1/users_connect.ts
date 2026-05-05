@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CountUsersRequest, CountUsersResponse } from "./users_pb.js";
+import { CountUsersRequest, CountUsersResponse, DeleteUserRequest, DeleteUserResponse } from "./users_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -19,6 +19,15 @@ export const UsersService = {
       name: "CountUsers",
       I: CountUsersRequest,
       O: CountUsersResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc api.v1.UsersService.DeleteUser
+     */
+    deleteUser: {
+      name: "DeleteUser",
+      I: DeleteUserRequest,
+      O: DeleteUserResponse,
       kind: MethodKind.Unary,
     },
   }
