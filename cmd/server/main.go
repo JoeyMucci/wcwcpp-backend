@@ -28,7 +28,7 @@ func main() {
 	// 3. Initialize Core Services
 	authService := service.NewAuthService(userRepo, tokenValidator)
 	contestService := service.NewContestService(postgres.NewContestRepository(db))
-	usersService := service.NewUsersService()
+	usersService := service.NewUsersService(userRepo)
 
 	// 4. Initialize Handlers
 	authHandler := handler.NewAuthHandler(authService)

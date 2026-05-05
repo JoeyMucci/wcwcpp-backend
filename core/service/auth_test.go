@@ -13,6 +13,8 @@ import (
 type mockUserRepository struct {
 	findByEmailFunc func(ctx context.Context, email string) (*entity.User, error)
 	createUserFunc  func(ctx context.Context, email string, username string) (*entity.User, error)
+	countUsersFunc  func(ctx context.Context) (int64, error)
+	deleteUserFunc  func(ctx context.Context, userID string) error
 }
 
 func (m *mockUserRepository) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
@@ -20,6 +22,18 @@ func (m *mockUserRepository) FindByEmail(ctx context.Context, email string) (*en
 }
 func (m *mockUserRepository) CreateUser(ctx context.Context, email string, username string) (*entity.User, error) {
 	return m.createUserFunc(ctx, email, username)
+}
+func (m *mockUserRepository) CountUsers(ctx context.Context) (int64, error) {
+	if m.countUsersFunc != nil {
+		return m.countUsersFunc(ctx)
+	}
+	return 0, nil
+}
+func (m *mockUserRepository) DeleteUser(ctx context.Context, userID string) error {
+	if m.deleteUserFunc != nil {
+		return m.deleteUserFunc(ctx, userID)
+	}
+	return nil
 }
 
 type mockTokenValidator struct {

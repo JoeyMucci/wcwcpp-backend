@@ -35,6 +35,7 @@ type PicksService interface {
 
 type UsersService interface {
 	CountUsers(ctx context.Context) (int64, error)
+	DeleteUser(ctx context.Context, userID string) error
 }
 
 type AuthService interface {
