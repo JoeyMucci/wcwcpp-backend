@@ -18,6 +18,13 @@ message Contest {
     bool active = 3;
 }
 
+message Subcontest {
+    string title = 1;
+    string slug = 2;
+    bool is_owner = 3;
+    bool is_member = 4;
+}
+
 message Country {
     string code = 1;
     string full_name = 2;

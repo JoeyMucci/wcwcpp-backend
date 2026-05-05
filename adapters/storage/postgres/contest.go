@@ -3,8 +3,11 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/go-jet/jet/v2/postgres"
+	"github.com/go-jet/jet/v2/qrm"
+	"github.com/google/uuid"
 	"github.com/joey/wcwcpp-backend/adapters/storage/jet/wcwcpp/public/model"
 	"github.com/joey/wcwcpp-backend/adapters/storage/jet/wcwcpp/public/table"
 	"github.com/joey/wcwcpp-backend/core/entity"
@@ -137,5 +140,165 @@ func (r *ContestRepository) CreateMatches(ctx context.Context, contestID string,
 	}
 
 	_, err := insertStmt.ExecContext(ctx, r.db)
+	return err
+}
+
+func (r *ContestRepository) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
+	stmt := postgres.SELECT(table.Contests.AllColumns).
+		FROM(table.Contests).
+		WHERE(table.Contests.Slug.EQ(postgres.String(slug)))
+	var dest model.Contests
+	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+		if errors.Is(err, qrm.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &entity.Contest{
+		ID:                 dest.ID.String(),
+		Title:              dest.Title,
+		Slug:               dest.Slug,
+		GroupUnlockDate:    dest.GroupUnlockDate,
+		GroupLockDate:      dest.GroupLockDate,
+		KnockoutUnlockDate: dest.KnockoutUnlockDate,
+		KnockoutLockDate:   dest.KnockoutLockDate,
+	}, nil
+}
+
+func (r *ContestRepository) CreateSubcontest(ctx context.Context, subcontest *entity.Subcontest) error {
+	stmt := table.Subcontests.INSERT(
+		table.Subcontests.ContestID,
+		table.Subcontests.UserID,
+		table.Subcontests.JoinCode,
+		table.Subcontests.Title,
+		table.Subcontests.Slug,
+	).VALUES(
+		subcontest.ContestID,
+		subcontest.UserID,
+		subcontest.JoinCode,
+		subcontest.Title,
+		subcontest.Slug,
+	).RETURNING(table.Subcontests.AllColumns)
+
+	var dest model.Subcontests
+	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+		return err
+	}
+	subcontest.ID = dest.ID.String()
+	return nil
+}
+
+func (r *ContestRepository) JoinSubcontest(ctx context.Context, subcontestID string, userID string) error {
+	stmt := table.SubcontestEntries.INSERT(
+		table.SubcontestEntries.SubcontestID,
+		table.SubcontestEntries.UserID,
+	).VALUES(
+		subcontestID,
+		userID,
+	)
+	_, err := stmt.ExecContext(ctx, r.db)
+	return err
+}
+
+func (r *ContestRepository) ListSubcontests(ctx context.Context, contestID string, userID string) ([]entity.Subcontest, error) {
+	parsedUserID := uuid.MustParse(userID)
+	parsedContestID := uuid.MustParse(contestID)
+
+	stmt := postgres.SELECT(
+		table.Subcontests.AllColumns,
+		table.Subcontests.UserID.EQ(postgres.UUID(parsedUserID)).AS("subcontest_result.is_owner"),
+		table.SubcontestEntries.UserID.IS_NOT_NULL().AS("subcontest_result.is_member"),
+	).FROM(
+		table.Subcontests.
+			LEFT_JOIN(table.SubcontestEntries, 
+				table.SubcontestEntries.SubcontestID.EQ(table.Subcontests.ID).
+				AND(table.SubcontestEntries.UserID.EQ(postgres.UUID(parsedUserID))),
+			),
+	).WHERE(
+		table.Subcontests.ContestID.EQ(postgres.UUID(parsedContestID)).
+		AND(
+			table.Subcontests.UserID.EQ(postgres.UUID(parsedUserID)).
+			OR(table.SubcontestEntries.UserID.IS_NOT_NULL()),
+		),
+	)
+
+	type SubcontestResult struct {
+		model.Subcontests
+		IsOwner  bool
+		IsMember bool
+	}
+
+	var dest []SubcontestResult
+	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+		return nil, err
+	}
+
+	var result []entity.Subcontest
+	for _, s := range dest {
+		result = append(result, entity.Subcontest{
+			ID:        s.ID.String(),
+			ContestID: s.ContestID.String(),
+			UserID:    s.UserID.String(),
+			JoinCode:  s.JoinCode,
+			Title:     s.Title,
+			Slug:      s.Slug,
+			IsOwner:   s.IsOwner,
+			IsMember:  s.IsMember,
+		})
+	}
+	return result, nil
+}
+
+func (r *ContestRepository) GetSubcontestByJoinCode(ctx context.Context, joinCode string) (*entity.Subcontest, error) {
+	stmt := postgres.SELECT(table.Subcontests.AllColumns).
+		FROM(table.Subcontests).
+		WHERE(table.Subcontests.JoinCode.EQ(postgres.String(joinCode)))
+
+	var dest model.Subcontests
+	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+		if errors.Is(err, qrm.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &entity.Subcontest{
+		ID:        dest.ID.String(),
+		ContestID: dest.ContestID.String(),
+		UserID:    dest.UserID.String(),
+		JoinCode:  dest.JoinCode,
+		Title:     dest.Title,
+		Slug:      dest.Slug,
+	}, nil
+}
+
+func (r *ContestRepository) GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error) {
+	stmt := postgres.SELECT(table.Subcontests.AllColumns).
+		FROM(table.Subcontests).
+		WHERE(table.Subcontests.Slug.EQ(postgres.String(slug)))
+
+	var dest model.Subcontests
+	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+		if errors.Is(err, qrm.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &entity.Subcontest{
+		ID:        dest.ID.String(),
+		ContestID: dest.ContestID.String(),
+		UserID:    dest.UserID.String(),
+		JoinCode:  dest.JoinCode,
+		Title:     dest.Title,
+		Slug:      dest.Slug,
+	}, nil
+}
+
+func (r *ContestRepository) DeleteSubcontest(ctx context.Context, subcontestID string) error {
+	stmt := table.Subcontests.DELETE().
+		WHERE(table.Subcontests.ID.EQ(postgres.UUID(uuid.MustParse(subcontestID))))
+
+	_, err := stmt.ExecContext(ctx, r.db)
 	return err
 }

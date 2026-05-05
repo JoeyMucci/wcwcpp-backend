@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
-import { Contest, Group } from "./types_pb.js";
+import { Contest, Group, Subcontest } from "./types_pb.js";
 
 /**
  * @generated from message api.v1.ListContestsRequest
@@ -215,9 +215,9 @@ export class ListSubcontestsRequest extends Message<ListSubcontestsRequest> {
  */
 export class ListSubcontestsResponse extends Message<ListSubcontestsResponse> {
   /**
-   * @generated from field: repeated api.v1.Contest subcontests = 1;
+   * @generated from field: repeated api.v1.Subcontest subcontests = 1;
    */
-  subcontests: Contest[] = [];
+  subcontests: Subcontest[] = [];
 
   constructor(data?: PartialMessage<ListSubcontestsResponse>) {
     super();
@@ -227,7 +227,7 @@ export class ListSubcontestsResponse extends Message<ListSubcontestsResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.ListSubcontestsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "subcontests", kind: "message", T: Contest, repeated: true },
+    { no: 1, name: "subcontests", kind: "message", T: Subcontest, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSubcontestsResponse {
@@ -261,6 +261,11 @@ export class CreateSubcontestRequest extends Message<CreateSubcontestRequest> {
    */
   subcontestTitle = "";
 
+  /**
+   * @generated from field: bool self_join = 3;
+   */
+  selfJoin = false;
+
   constructor(data?: PartialMessage<CreateSubcontestRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -271,6 +276,7 @@ export class CreateSubcontestRequest extends Message<CreateSubcontestRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "subcontest_title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "self_join", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSubcontestRequest {

@@ -33,12 +33,13 @@ message ListSubcontestsRequest {
 }
 
 message ListSubcontestsResponse {
-    repeated Contest subcontests = 1;
+    repeated Subcontest subcontests = 1;
 }
 
 message CreateSubcontestRequest {
     string contest_slug = 1;
     string subcontest_title = 2;
+    bool self_join = 3;
 }
 
 message CreateSubcontestResponse {
@@ -63,4 +64,5 @@ service ContestService {
     rpc ListSubcontests(ListSubcontestsRequest) returns (ListSubcontestsResponse);
     rpc CreateSubcontest(CreateSubcontestRequest) returns (CreateSubcontestResponse);
     rpc DeleteSubcontest(DeleteSubcontestRequest) returns (DeleteSubcontestResponse);
+    rpc JoinSubcontest(JoinSubcontestRequest) returns (JoinSubcontestResponse);
 }

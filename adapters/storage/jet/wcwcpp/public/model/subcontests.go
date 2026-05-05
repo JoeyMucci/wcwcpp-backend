@@ -9,7 +9,6 @@ package model
 
 import (
 	"github.com/google/uuid"
-	"time"
 )
 
 type Subcontests struct {
@@ -19,5 +18,4 @@ type Subcontests struct {
 	JoinCode  string
 	Title     string
 	Slug      string
-	DeletedAt *time.Time
 }

@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joey/wcwcpp-backend/adapters/interceptor"
 	"github.com/joey/wcwcpp-backend/core/entity"
 	v1 "github.com/joey/wcwcpp-backend/pkg/api/v1"
 	"github.com/joey/wcwcpp-backend/ports"
@@ -30,9 +31,10 @@ type mockContestService struct {
 	ports.ContestService
 	listContestsFunc     func(ctx context.Context) ([]entity.Contest, error)
 	createContestFunc    func(ctx context.Context, contest entity.Contest) error
-	listSubcontestsFunc  func(ctx context.Context, contestSlug string) ([]entity.Contest, error)
-	createSubcontestFunc func(ctx context.Context, contestSlug string, title string) (string, error)
-	deleteSubcontestFunc func(ctx context.Context, subcontestSlug string) error
+	listSubcontestsFunc  func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error)
+	createSubcontestFunc func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error)
+	deleteSubcontestFunc func(ctx context.Context, userID string, subcontestSlug string) error
+	joinSubcontestFunc   func(ctx context.Context, userID string, joinCode string) error
 }
 
 func (m *mockContestService) CreateContest(ctx context.Context, contest entity.Contest) error {
@@ -42,14 +44,17 @@ func (m *mockContestService) CreateContest(ctx context.Context, contest entity.C
 func (m *mockContestService) ListContests(ctx context.Context) ([]entity.Contest, error) {
 	return m.listContestsFunc(ctx)
 }
-func (m *mockContestService) ListSubcontests(ctx context.Context, contestSlug string) ([]entity.Contest, error) {
-	return m.listSubcontestsFunc(ctx, contestSlug)
+func (m *mockContestService) ListSubcontests(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error) {
+	return m.listSubcontestsFunc(ctx, userID, contestSlug)
 }
-func (m *mockContestService) CreateSubcontest(ctx context.Context, contestSlug string, title string) (string, error) {
-	return m.createSubcontestFunc(ctx, contestSlug, title)
+func (m *mockContestService) CreateSubcontest(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
+	return m.createSubcontestFunc(ctx, userID, contestSlug, title, selfJoin)
 }
-func (m *mockContestService) DeleteSubcontest(ctx context.Context, subcontestSlug string) error {
-	return m.deleteSubcontestFunc(ctx, subcontestSlug)
+func (m *mockContestService) DeleteSubcontest(ctx context.Context, userID string, subcontestSlug string) error {
+	return m.deleteSubcontestFunc(ctx, userID, subcontestSlug)
+}
+func (m *mockContestService) JoinSubcontest(ctx context.Context, userID string, joinCode string) error {
+	return m.joinSubcontestFunc(ctx, userID, joinCode)
 }
 
 func TestContestHandler_ListContests(t *testing.T) {
@@ -163,6 +168,15 @@ func TestContestHandler_CreateContest(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:  "already exists",
+			token: superToken,
+			mockFunc: func(ctx context.Context, contest entity.Contest) error {
+				return errors.New("pq: duplicate key value violates unique constraint \"contests_title_key\"")
+			},
+			expectError: true,
+			errCode:     connect.CodeAlreadyExists,
+		},
+		{
 			name:  "validates entity mapping",
 			token: superToken,
 			mockFunc: func(ctx context.Context, contest entity.Contest) error {
@@ -254,24 +268,38 @@ func TestContestHandler_CreateContest(t *testing.T) {
 }
 
 func TestContestHandler_ListSubcontests(t *testing.T) {
+	validToken := generateTestToken("secret", "user-123", "user")
+
 	tests := []struct {
 		name        string
-		mockFunc    func(ctx context.Context, contestSlug string) ([]entity.Contest, error)
+		token       string
+		mockFunc    func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error)
 		expectError bool
+		errCode     connect.Code
 	}{
 		{
-			name: "success",
-			mockFunc: func(ctx context.Context, contestSlug string) ([]entity.Contest, error) {
-				return []entity.Contest{{}}, nil
+			name:  "success",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error) {
+				return []entity.Subcontest{{ID: "1"}}, nil
 			},
 			expectError: false,
 		},
 		{
-			name: "error",
-			mockFunc: func(ctx context.Context, contestSlug string) ([]entity.Contest, error) {
+			name:  "error",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error) {
 				return nil, errors.New("service error")
 			},
 			expectError: true,
+			errCode:     connect.CodeUnknown,
+		},
+		{
+			name:        "unauthenticated",
+			token:       "",
+			mockFunc:    nil,
+			expectError: true,
+			errCode:     connect.CodeUnauthenticated,
 		},
 	}
 
@@ -280,33 +308,84 @@ func TestContestHandler_ListSubcontests(t *testing.T) {
 			svc := &mockContestService{listSubcontestsFunc: tt.mockFunc}
 			h := NewContestHandler(svc)
 
-			_, err := h.ListSubcontests(context.Background(), connect.NewRequest(&v1.ListSubcontestsRequest{ContestSlug: "test"}))
-			if (err != nil) != tt.expectError {
-				t.Errorf("expected error %v, got %v", tt.expectError, err)
+			req := connect.NewRequest(&v1.ListSubcontestsRequest{ContestSlug: "test"})
+			if tt.token != "" {
+				req.Header().Set("Authorization", "Bearer "+tt.token)
+			}
+
+			// Add secret to env
+			t.Setenv("JWT_SECRET", "secret")
+
+			// Need to wrap handler with interceptors manually for testing
+			handler := interceptor.WithAuth(func(ctx context.Context, r *connect.Request[v1.ListSubcontestsRequest]) (*connect.Response[v1.ListSubcontestsResponse], error) {
+				return h.ListSubcontests(ctx, r)
+			})
+
+			_, err := handler(context.Background(), req)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				} else {
+					var connectErr *connect.Error
+					if errors.As(err, &connectErr) && tt.errCode != 0 {
+						if connectErr.Code() != tt.errCode {
+							t.Errorf("expected code %v, got %v", tt.errCode, connectErr.Code())
+						}
+					}
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
 			}
 		})
 	}
 }
 
 func TestContestHandler_CreateSubcontest(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test_secret")
+	token := generateTestToken("test_secret", "user1", "user1@example.com")
+
 	tests := []struct {
 		name        string
-		mockFunc    func(ctx context.Context, contestSlug string, title string) (string, error)
+		token       string
+		mockFunc    func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error)
 		expectError bool
+		errCode     connect.Code
 	}{
 		{
-			name: "success",
-			mockFunc: func(ctx context.Context, contestSlug string, title string) (string, error) {
+			name:  "success",
+			token: token,
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
 				return "JOINCODE", nil
 			},
 			expectError: false,
 		},
 		{
-			name: "error",
-			mockFunc: func(ctx context.Context, contestSlug string, title string) (string, error) {
+			name:  "already exists",
+			token: token,
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
+				return "", errors.New("pq: duplicate key value violates unique constraint")
+			},
+			expectError: true,
+			errCode:     connect.CodeAlreadyExists,
+		},
+		{
+			name:  "error",
+			token: token,
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
 				return "", errors.New("service error")
 			},
 			expectError: true,
+		},
+		{
+			name:  "unauthenticated",
+			token: "",
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
+				return "", nil
+			},
+			expectError: true,
+			errCode:     connect.CodeUnauthenticated,
 		},
 	}
 
@@ -315,9 +394,17 @@ func TestContestHandler_CreateSubcontest(t *testing.T) {
 			svc := &mockContestService{createSubcontestFunc: tt.mockFunc}
 			h := NewContestHandler(svc)
 
-			resp, err := h.CreateSubcontest(context.Background(), connect.NewRequest(&v1.CreateSubcontestRequest{ContestSlug: "test", SubcontestTitle: "title"}))
+			req := connect.NewRequest(&v1.CreateSubcontestRequest{ContestSlug: "test", SubcontestTitle: "title", SelfJoin: true})
+			if tt.token != "" {
+				req.Header().Set("Authorization", "Bearer "+tt.token)
+			}
+
+			resp, err := h.CreateSubcontest(context.Background(), req)
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error %v, got %v", tt.expectError, err)
+			}
+			if tt.expectError && tt.errCode != 0 && connect.CodeOf(err) != tt.errCode {
+				t.Errorf("expected error code %v, got %v", tt.errCode, connect.CodeOf(err))
 			}
 			if !tt.expectError && resp.Msg.JoinCode != "JOINCODE" {
 				t.Errorf("expected join code JOINCODE, got %s", resp.Msg.JoinCode)
@@ -327,24 +414,56 @@ func TestContestHandler_CreateSubcontest(t *testing.T) {
 }
 
 func TestContestHandler_DeleteSubcontest(t *testing.T) {
+	validToken := generateTestToken("secret", "user-123", "user")
+
 	tests := []struct {
 		name        string
-		mockFunc    func(ctx context.Context, subcontestSlug string) error
+		token       string
+		mockFunc    func(ctx context.Context, userID string, subcontestSlug string) error
 		expectError bool
+		errCode     connect.Code
 	}{
 		{
-			name: "success",
-			mockFunc: func(ctx context.Context, subcontestSlug string) error {
+			name:  "success",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string) error {
 				return nil
 			},
 			expectError: false,
 		},
 		{
-			name: "error",
-			mockFunc: func(ctx context.Context, subcontestSlug string) error {
+			name:  "not_found",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string) error {
+				return errors.New("subcontest not found")
+			},
+			expectError: true,
+			errCode:     connect.CodeNotFound,
+		},
+		{
+			name:  "not_owner",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string) error {
+				return errors.New("not owner")
+			},
+			expectError: true,
+			errCode:     connect.CodePermissionDenied,
+		},
+		{
+			name:  "error",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string) error {
 				return errors.New("service error")
 			},
 			expectError: true,
+			errCode:     connect.CodeUnknown,
+		},
+		{
+			name:        "unauthenticated",
+			token:       "",
+			mockFunc:    nil,
+			expectError: true,
+			errCode:     connect.CodeUnauthenticated,
 		},
 	}
 
@@ -353,9 +472,128 @@ func TestContestHandler_DeleteSubcontest(t *testing.T) {
 			svc := &mockContestService{deleteSubcontestFunc: tt.mockFunc}
 			h := NewContestHandler(svc)
 
-			_, err := h.DeleteSubcontest(context.Background(), connect.NewRequest(&v1.DeleteSubcontestRequest{SubcontestSlug: "test"}))
-			if (err != nil) != tt.expectError {
-				t.Errorf("expected error %v, got %v", tt.expectError, err)
+			req := connect.NewRequest(&v1.DeleteSubcontestRequest{SubcontestSlug: "test"})
+			if tt.token != "" {
+				req.Header().Set("Authorization", "Bearer "+tt.token)
+			}
+
+			// Add secret to env
+			t.Setenv("JWT_SECRET", "secret")
+
+			// Need to wrap handler with interceptors manually for testing
+			handler := interceptor.WithAuth(func(ctx context.Context, r *connect.Request[v1.DeleteSubcontestRequest]) (*connect.Response[v1.DeleteSubcontestResponse], error) {
+				return h.DeleteSubcontest(ctx, r)
+			})
+
+			_, err := handler(context.Background(), req)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				} else {
+					var connectErr *connect.Error
+					if errors.As(err, &connectErr) && tt.errCode != 0 {
+						if connectErr.Code() != tt.errCode {
+							t.Errorf("expected code %v, got %v", tt.errCode, connectErr.Code())
+						}
+					}
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestContestHandler_JoinSubcontest(t *testing.T) {
+	validToken := generateTestToken("secret", "user-123", "user")
+
+	tests := []struct {
+		name        string
+		token       string
+		mockFunc    func(ctx context.Context, userID string, joinCode string) error
+		expectError bool
+		errCode     connect.Code
+	}{
+		{
+			name:  "success",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, joinCode string) error {
+				return nil
+			},
+			expectError: false,
+		},
+		{
+			name:  "not_found",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, joinCode string) error {
+				return errors.New("invalid join code")
+			},
+			expectError: true,
+			errCode:     connect.CodeNotFound,
+		},
+		{
+			name:  "already_exists",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, joinCode string) error {
+				return errors.New("unique constraint violation")
+			},
+			expectError: true,
+			errCode:     connect.CodeAlreadyExists,
+		},
+		{
+			name:  "error",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, joinCode string) error {
+				return errors.New("service error")
+			},
+			expectError: true,
+			errCode:     connect.CodeUnknown,
+		},
+		{
+			name:        "unauthenticated",
+			token:       "",
+			mockFunc:    nil,
+			expectError: true,
+			errCode:     connect.CodeUnauthenticated,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := &mockContestService{joinSubcontestFunc: tt.mockFunc}
+			h := NewContestHandler(svc)
+
+			req := connect.NewRequest(&v1.JoinSubcontestRequest{JoinCode: "CODE1234"})
+			if tt.token != "" {
+				req.Header().Set("Authorization", "Bearer "+tt.token)
+			}
+
+			// Add secret to env
+			t.Setenv("JWT_SECRET", "secret")
+
+			// Need to wrap handler with interceptors manually for testing
+			handler := interceptor.WithAuth(func(ctx context.Context, r *connect.Request[v1.JoinSubcontestRequest]) (*connect.Response[v1.JoinSubcontestResponse], error) {
+				return h.JoinSubcontest(ctx, r)
+			})
+
+			_, err := handler(context.Background(), req)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				} else {
+					var connectErr *connect.Error
+					if errors.As(err, &connectErr) && tt.errCode != 0 {
+						if connectErr.Code() != tt.errCode {
+							t.Errorf("expected code %v, got %v", tt.errCode, connectErr.Code())
+						}
+					}
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
 			}
 		})
 	}
