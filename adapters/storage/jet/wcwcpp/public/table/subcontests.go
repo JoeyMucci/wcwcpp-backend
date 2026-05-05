@@ -23,7 +23,6 @@ type subcontestsTable struct {
 	JoinCode  postgres.ColumnString
 	Title     postgres.ColumnString
 	Slug      postgres.ColumnString
-	DeletedAt postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -71,9 +70,8 @@ func newSubcontestsTableImpl(schemaName, tableName, alias string) subcontestsTab
 		JoinCodeColumn  = postgres.StringColumn("join_code")
 		TitleColumn     = postgres.StringColumn("title")
 		SlugColumn      = postgres.StringColumn("slug")
-		DeletedAtColumn = postgres.TimestampzColumn("deleted_at")
-		allColumns      = postgres.ColumnList{IDColumn, ContestIDColumn, UserIDColumn, JoinCodeColumn, TitleColumn, SlugColumn, DeletedAtColumn}
-		mutableColumns  = postgres.ColumnList{ContestIDColumn, UserIDColumn, JoinCodeColumn, TitleColumn, SlugColumn, DeletedAtColumn}
+		allColumns      = postgres.ColumnList{IDColumn, ContestIDColumn, UserIDColumn, JoinCodeColumn, TitleColumn, SlugColumn}
+		mutableColumns  = postgres.ColumnList{ContestIDColumn, UserIDColumn, JoinCodeColumn, TitleColumn, SlugColumn}
 		defaultColumns  = postgres.ColumnList{IDColumn}
 	)
 
@@ -87,7 +85,6 @@ func newSubcontestsTableImpl(schemaName, tableName, alias string) subcontestsTab
 		JoinCode:  JoinCodeColumn,
 		Title:     TitleColumn,
 		Slug:      SlugColumn,
-		DeletedAt: DeletedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

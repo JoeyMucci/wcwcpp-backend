@@ -17,7 +17,16 @@ type Contest struct {
 	KnockoutLockDate   time.Time
 	Groups             []Group
 }
-type Subcontest struct{}
+type Subcontest struct {
+	ID        string
+	ContestID string
+	UserID    string
+	JoinCode  string
+	Title     string
+	Slug      string
+	IsOwner   bool
+	IsMember  bool
+}
 type Match struct {
 	Country1          *Country
 	Country2          *Country

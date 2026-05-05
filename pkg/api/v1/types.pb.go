@@ -147,6 +147,77 @@ func (x *Contest) GetActive() bool {
 	return false
 }
 
+type Subcontest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Title    string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	Slug     string `protobuf:"bytes,2,opt,name=slug,proto3" json:"slug,omitempty"`
+	IsOwner  bool   `protobuf:"varint,3,opt,name=is_owner,json=isOwner,proto3" json:"is_owner,omitempty"`
+	IsMember bool   `protobuf:"varint,4,opt,name=is_member,json=isMember,proto3" json:"is_member,omitempty"`
+}
+
+func (x *Subcontest) Reset() {
+	*x = Subcontest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_v1_types_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Subcontest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Subcontest) ProtoMessage() {}
+
+func (x *Subcontest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_types_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Subcontest.ProtoReflect.Descriptor instead.
+func (*Subcontest) Descriptor() ([]byte, []int) {
+	return file_api_v1_types_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Subcontest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Subcontest) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+func (x *Subcontest) GetIsOwner() bool {
+	if x != nil {
+		return x.IsOwner
+	}
+	return false
+}
+
+func (x *Subcontest) GetIsMember() bool {
+	if x != nil {
+		return x.IsMember
+	}
+	return false
+}
+
 type Country struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -159,7 +230,7 @@ type Country struct {
 func (x *Country) Reset() {
 	*x = Country{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_v1_types_proto_msgTypes[2]
+		mi := &file_api_v1_types_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -172,7 +243,7 @@ func (x *Country) String() string {
 func (*Country) ProtoMessage() {}
 
 func (x *Country) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_types_proto_msgTypes[2]
+	mi := &file_api_v1_types_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -185,7 +256,7 @@ func (x *Country) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Country.ProtoReflect.Descriptor instead.
 func (*Country) Descriptor() ([]byte, []int) {
-	return file_api_v1_types_proto_rawDescGZIP(), []int{2}
+	return file_api_v1_types_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Country) GetCode() string {
@@ -214,7 +285,7 @@ type Group struct {
 func (x *Group) Reset() {
 	*x = Group{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_v1_types_proto_msgTypes[3]
+		mi := &file_api_v1_types_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -227,7 +298,7 @@ func (x *Group) String() string {
 func (*Group) ProtoMessage() {}
 
 func (x *Group) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_types_proto_msgTypes[3]
+	mi := &file_api_v1_types_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -240,7 +311,7 @@ func (x *Group) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Group.ProtoReflect.Descriptor instead.
 func (*Group) Descriptor() ([]byte, []int) {
-	return file_api_v1_types_proto_rawDescGZIP(), []int{3}
+	return file_api_v1_types_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Group) GetLetter() string {
@@ -269,7 +340,7 @@ type GroupPick struct {
 func (x *GroupPick) Reset() {
 	*x = GroupPick{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_v1_types_proto_msgTypes[4]
+		mi := &file_api_v1_types_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -282,7 +353,7 @@ func (x *GroupPick) String() string {
 func (*GroupPick) ProtoMessage() {}
 
 func (x *GroupPick) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_types_proto_msgTypes[4]
+	mi := &file_api_v1_types_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -295,7 +366,7 @@ func (x *GroupPick) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupPick.ProtoReflect.Descriptor instead.
 func (*GroupPick) Descriptor() ([]byte, []int) {
-	return file_api_v1_types_proto_rawDescGZIP(), []int{4}
+	return file_api_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GroupPick) GetGroup() *Group {
@@ -324,7 +395,7 @@ type KnockoutEntry struct {
 func (x *KnockoutEntry) Reset() {
 	*x = KnockoutEntry{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_v1_types_proto_msgTypes[5]
+		mi := &file_api_v1_types_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -337,7 +408,7 @@ func (x *KnockoutEntry) String() string {
 func (*KnockoutEntry) ProtoMessage() {}
 
 func (x *KnockoutEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_types_proto_msgTypes[5]
+	mi := &file_api_v1_types_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -350,7 +421,7 @@ func (x *KnockoutEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnockoutEntry.ProtoReflect.Descriptor instead.
 func (*KnockoutEntry) Descriptor() ([]byte, []int) {
-	return file_api_v1_types_proto_rawDescGZIP(), []int{5}
+	return file_api_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *KnockoutEntry) GetCountry() *Country {
@@ -378,7 +449,7 @@ type KnockoutPick struct {
 func (x *KnockoutPick) Reset() {
 	*x = KnockoutPick{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_v1_types_proto_msgTypes[6]
+		mi := &file_api_v1_types_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -391,7 +462,7 @@ func (x *KnockoutPick) String() string {
 func (*KnockoutPick) ProtoMessage() {}
 
 func (x *KnockoutPick) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_types_proto_msgTypes[6]
+	mi := &file_api_v1_types_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,7 +475,7 @@ func (x *KnockoutPick) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnockoutPick.ProtoReflect.Descriptor instead.
 func (*KnockoutPick) Descriptor() ([]byte, []int) {
-	return file_api_v1_types_proto_rawDescGZIP(), []int{6}
+	return file_api_v1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *KnockoutPick) GetEntries() []*KnockoutEntry {
@@ -430,7 +501,7 @@ type Match struct {
 func (x *Match) Reset() {
 	*x = Match{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_v1_types_proto_msgTypes[7]
+		mi := &file_api_v1_types_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -443,7 +514,7 @@ func (x *Match) String() string {
 func (*Match) ProtoMessage() {}
 
 func (x *Match) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_types_proto_msgTypes[7]
+	mi := &file_api_v1_types_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -456,7 +527,7 @@ func (x *Match) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Match.ProtoReflect.Descriptor instead.
 func (*Match) Descriptor() ([]byte, []int) {
-	return file_api_v1_types_proto_rawDescGZIP(), []int{7}
+	return file_api_v1_types_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Match) GetCountry1() *Country {
@@ -513,7 +584,7 @@ type LeaderboardEntry struct {
 func (x *LeaderboardEntry) Reset() {
 	*x = LeaderboardEntry{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_v1_types_proto_msgTypes[8]
+		mi := &file_api_v1_types_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -526,7 +597,7 @@ func (x *LeaderboardEntry) String() string {
 func (*LeaderboardEntry) ProtoMessage() {}
 
 func (x *LeaderboardEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_types_proto_msgTypes[8]
+	mi := &file_api_v1_types_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -539,7 +610,7 @@ func (x *LeaderboardEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaderboardEntry.ProtoReflect.Descriptor instead.
 func (*LeaderboardEntry) Descriptor() ([]byte, []int) {
-	return file_api_v1_types_proto_rawDescGZIP(), []int{8}
+	return file_api_v1_types_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *LeaderboardEntry) GetName() string {
@@ -572,6 +643,13 @@ var file_api_v1_types_proto_rawDesc = []byte{
 	0x69, 0x74, 0x6c, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x6c, 0x75, 0x67, 0x18, 0x02, 0x20, 0x01,
 	0x28, 0x09, 0x52, 0x04, 0x73, 0x6c, 0x75, 0x67, 0x12, 0x16, 0x0a, 0x06, 0x61, 0x63, 0x74, 0x69,
 	0x76, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65,
+	0x22, 0x6e, 0x0a, 0x0a, 0x53, 0x75, 0x62, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x73, 0x74, 0x12, 0x14,
+	0x0a, 0x05, 0x74, 0x69, 0x74, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x74,
+	0x69, 0x74, 0x6c, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x6c, 0x75, 0x67, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x73, 0x6c, 0x75, 0x67, 0x12, 0x19, 0x0a, 0x08, 0x69, 0x73, 0x5f, 0x6f,
+	0x77, 0x6e, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x69, 0x73, 0x4f, 0x77,
+	0x6e, 0x65, 0x72, 0x12, 0x1b, 0x0a, 0x09, 0x69, 0x73, 0x5f, 0x6d, 0x65, 0x6d, 0x62, 0x65, 0x72,
+	0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x69, 0x73, 0x4d, 0x65, 0x6d, 0x62, 0x65, 0x72,
 	0x22, 0x3a, 0x0a, 0x07, 0x43, 0x6f, 0x75, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x63,
 	0x6f, 0x64, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12,
 	0x1b, 0x0a, 0x09, 0x66, 0x75, 0x6c, 0x6c, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01,
@@ -645,25 +723,26 @@ func file_api_v1_types_proto_rawDescGZIP() []byte {
 	return file_api_v1_types_proto_rawDescData
 }
 
-var file_api_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_api_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_api_v1_types_proto_goTypes = []interface{}{
 	(*User)(nil),             // 0: api.v1.User
 	(*Contest)(nil),          // 1: api.v1.Contest
-	(*Country)(nil),          // 2: api.v1.Country
-	(*Group)(nil),            // 3: api.v1.Group
-	(*GroupPick)(nil),        // 4: api.v1.GroupPick
-	(*KnockoutEntry)(nil),    // 5: api.v1.KnockoutEntry
-	(*KnockoutPick)(nil),     // 6: api.v1.KnockoutPick
-	(*Match)(nil),            // 7: api.v1.Match
-	(*LeaderboardEntry)(nil), // 8: api.v1.LeaderboardEntry
+	(*Subcontest)(nil),       // 2: api.v1.Subcontest
+	(*Country)(nil),          // 3: api.v1.Country
+	(*Group)(nil),            // 4: api.v1.Group
+	(*GroupPick)(nil),        // 5: api.v1.GroupPick
+	(*KnockoutEntry)(nil),    // 6: api.v1.KnockoutEntry
+	(*KnockoutPick)(nil),     // 7: api.v1.KnockoutPick
+	(*Match)(nil),            // 8: api.v1.Match
+	(*LeaderboardEntry)(nil), // 9: api.v1.LeaderboardEntry
 }
 var file_api_v1_types_proto_depIdxs = []int32{
-	2, // 0: api.v1.Group.countries:type_name -> api.v1.Country
-	3, // 1: api.v1.GroupPick.group:type_name -> api.v1.Group
-	2, // 2: api.v1.KnockoutEntry.country:type_name -> api.v1.Country
-	5, // 3: api.v1.KnockoutPick.entries:type_name -> api.v1.KnockoutEntry
-	2, // 4: api.v1.Match.country1:type_name -> api.v1.Country
-	2, // 5: api.v1.Match.country2:type_name -> api.v1.Country
+	3, // 0: api.v1.Group.countries:type_name -> api.v1.Country
+	4, // 1: api.v1.GroupPick.group:type_name -> api.v1.Group
+	3, // 2: api.v1.KnockoutEntry.country:type_name -> api.v1.Country
+	6, // 3: api.v1.KnockoutPick.entries:type_name -> api.v1.KnockoutEntry
+	3, // 4: api.v1.Match.country1:type_name -> api.v1.Country
+	3, // 5: api.v1.Match.country2:type_name -> api.v1.Country
 	6, // [6:6] is the sub-list for method output_type
 	6, // [6:6] is the sub-list for method input_type
 	6, // [6:6] is the sub-list for extension type_name
@@ -702,7 +781,7 @@ func file_api_v1_types_proto_init() {
 			}
 		}
 		file_api_v1_types_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Country); i {
+			switch v := v.(*Subcontest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -714,7 +793,7 @@ func file_api_v1_types_proto_init() {
 			}
 		}
 		file_api_v1_types_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Group); i {
+			switch v := v.(*Country); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -726,7 +805,7 @@ func file_api_v1_types_proto_init() {
 			}
 		}
 		file_api_v1_types_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GroupPick); i {
+			switch v := v.(*Group); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -738,7 +817,7 @@ func file_api_v1_types_proto_init() {
 			}
 		}
 		file_api_v1_types_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*KnockoutEntry); i {
+			switch v := v.(*GroupPick); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -750,7 +829,7 @@ func file_api_v1_types_proto_init() {
 			}
 		}
 		file_api_v1_types_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*KnockoutPick); i {
+			switch v := v.(*KnockoutEntry); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -762,7 +841,7 @@ func file_api_v1_types_proto_init() {
 			}
 		}
 		file_api_v1_types_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Match); i {
+			switch v := v.(*KnockoutPick); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -774,6 +853,18 @@ func file_api_v1_types_proto_init() {
 			}
 		}
 		file_api_v1_types_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Match); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_v1_types_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*LeaderboardEntry); i {
 			case 0:
 				return &v.state
@@ -786,14 +877,14 @@ func file_api_v1_types_proto_init() {
 			}
 		}
 	}
-	file_api_v1_types_proto_msgTypes[7].OneofWrappers = []interface{}{}
+	file_api_v1_types_proto_msgTypes[8].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_v1_types_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

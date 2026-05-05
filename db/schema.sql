@@ -17,8 +17,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    deleted_at TIMESTAMP WITH TIME ZONE
+    username VARCHAR(50) UNIQUE NOT NULL
 );
 
 CREATE TABLE contests (
@@ -39,65 +38,64 @@ CREATE TABLE countries (
 
 CREATE TABLE subcontests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contest_id UUID NOT NULL REFERENCES contests(id),
-    user_id UUID NOT NULL REFERENCES users(id),
+    contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     join_code VARCHAR(8) UNIQUE NOT NULL,
     title VARCHAR(255) UNIQUE NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    deleted_at TIMESTAMP WITH TIME ZONE
+    slug VARCHAR(255) UNIQUE NOT NULL
 );
 
 CREATE TABLE contest_standings (
-    contest_id UUID NOT NULL REFERENCES contests(id),
-    user_id UUID NOT NULL REFERENCES users(id),
+    contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     score INT NOT NULL,
     PRIMARY KEY (contest_id, user_id)
 );
 
 CREATE TABLE subcontest_entries (
-    subcontest_id UUID NOT NULL REFERENCES subcontests(id),
-    user_id UUID NOT NULL REFERENCES users(id),
+    subcontest_id UUID NOT NULL REFERENCES subcontests(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     PRIMARY KEY (subcontest_id, user_id)
 );
 
 CREATE TABLE group_standings (
-    contest_id UUID NOT NULL REFERENCES contests(id),
-    country_id UUID NOT NULL REFERENCES countries(id),
+    contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
+    country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
     letter VARCHAR(1) NOT NULL,
     points INT NOT NULL DEFAULT 0,
     PRIMARY KEY (contest_id, country_id)
 );
 
 CREATE TABLE knockout_standings (
-    contest_id UUID NOT NULL REFERENCES contests(id),
-    country_id UUID NOT NULL REFERENCES countries(id),
+    contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
+    country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
     round INT NOT NULL,
     PRIMARY KEY (contest_id, country_id)
 );
 
 CREATE TABLE group_picks (
-    user_id UUID NOT NULL REFERENCES users(id),
-    contest_id UUID NOT NULL REFERENCES contests(id),
-    country_id UUID NOT NULL REFERENCES countries(id),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
+    country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
     place INT NOT NULL,
     PRIMARY KEY (user_id, contest_id, country_id)
 );
 
 CREATE TABLE knockout_picks (
-    user_id UUID NOT NULL REFERENCES users(id),
-    contest_id UUID NOT NULL REFERENCES contests(id),
-    country_id UUID NOT NULL REFERENCES countries(id),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
+    country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
     round INT NOT NULL,
     PRIMARY KEY (user_id, contest_id, country_id)
 );
 
 CREATE TABLE matches (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    contest_id UUID NOT NULL REFERENCES contests(id),
+    contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
     round INT NOT NULL,
     round_index INT,
-    country1_id UUID REFERENCES countries(id),
-    country2_id UUID REFERENCES countries(id),
+    country1_id UUID REFERENCES countries(id) ON DELETE CASCADE,
+    country2_id UUID REFERENCES countries(id) ON DELETE CASCADE,
     country1_goals INT,
     country2_goals INT,
     country1_penalties INT,

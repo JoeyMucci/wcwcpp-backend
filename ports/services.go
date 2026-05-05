@@ -9,9 +9,10 @@ import (
 type ContestService interface {
 	ListContests(ctx context.Context) ([]entity.Contest, error)
 	CreateContest(ctx context.Context, contest entity.Contest) error
-	ListSubcontests(ctx context.Context, contestSlug string) ([]entity.Contest, error)
-	CreateSubcontest(ctx context.Context, contestSlug string, title string) (string, error)
-	DeleteSubcontest(ctx context.Context, subcontestSlug string) error
+	ListSubcontests(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error)
+	CreateSubcontest(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error)
+	DeleteSubcontest(ctx context.Context, userID string, subcontestSlug string) error
+	JoinSubcontest(ctx context.Context, userID string, joinCode string) error
 }
 
 type LeaderboardService interface {

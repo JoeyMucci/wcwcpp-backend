@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateContestRequest, CreateContestResponse, CreateSubcontestRequest, CreateSubcontestResponse, DeleteSubcontestRequest, DeleteSubcontestResponse, ListContestsRequest, ListContestsResponse, ListSubcontestsRequest, ListSubcontestsResponse } from "./contests_pb.js";
+import { CreateContestRequest, CreateContestResponse, CreateSubcontestRequest, CreateSubcontestResponse, DeleteSubcontestRequest, DeleteSubcontestResponse, JoinSubcontestRequest, JoinSubcontestResponse, ListContestsRequest, ListContestsResponse, ListSubcontestsRequest, ListSubcontestsResponse } from "./contests_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -55,6 +55,15 @@ export const ContestService = {
       name: "DeleteSubcontest",
       I: DeleteSubcontestRequest,
       O: DeleteSubcontestResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc api.v1.ContestService.JoinSubcontest
+     */
+    joinSubcontest: {
+      name: "JoinSubcontest",
+      I: JoinSubcontestRequest,
+      O: JoinSubcontestResponse,
       kind: MethodKind.Unary,
     },
   }

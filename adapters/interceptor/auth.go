@@ -67,7 +67,7 @@ func validateAuthHeader(authHeader string) (string, string, error) {
 	tokenString := parts[1]
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "fallback_secret_for_dev_only"
+		return "", "", errors.New("JWT_SECRET environment variable is not configured")
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {

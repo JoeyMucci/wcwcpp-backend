@@ -9,12 +9,10 @@ package model
 
 import (
 	"github.com/google/uuid"
-	"time"
 )
 
 type Users struct {
-	ID        uuid.UUID `sql:"primary_key"`
-	Email     string
-	Username  string
-	DeletedAt *time.Time
+	ID       uuid.UUID `sql:"primary_key"`
+	Email    string
+	Username string
 }

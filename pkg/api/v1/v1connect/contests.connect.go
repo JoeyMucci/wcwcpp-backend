@@ -48,6 +48,9 @@ const (
 	// ContestServiceDeleteSubcontestProcedure is the fully-qualified name of the ContestService's
 	// DeleteSubcontest RPC.
 	ContestServiceDeleteSubcontestProcedure = "/api.v1.ContestService/DeleteSubcontest"
+	// ContestServiceJoinSubcontestProcedure is the fully-qualified name of the ContestService's
+	// JoinSubcontest RPC.
+	ContestServiceJoinSubcontestProcedure = "/api.v1.ContestService/JoinSubcontest"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -58,6 +61,7 @@ var (
 	contestServiceListSubcontestsMethodDescriptor  = contestServiceServiceDescriptor.Methods().ByName("ListSubcontests")
 	contestServiceCreateSubcontestMethodDescriptor = contestServiceServiceDescriptor.Methods().ByName("CreateSubcontest")
 	contestServiceDeleteSubcontestMethodDescriptor = contestServiceServiceDescriptor.Methods().ByName("DeleteSubcontest")
+	contestServiceJoinSubcontestMethodDescriptor   = contestServiceServiceDescriptor.Methods().ByName("JoinSubcontest")
 )
 
 // ContestServiceClient is a client for the api.v1.ContestService service.
@@ -67,6 +71,7 @@ type ContestServiceClient interface {
 	ListSubcontests(context.Context, *connect.Request[v1.ListSubcontestsRequest]) (*connect.Response[v1.ListSubcontestsResponse], error)
 	CreateSubcontest(context.Context, *connect.Request[v1.CreateSubcontestRequest]) (*connect.Response[v1.CreateSubcontestResponse], error)
 	DeleteSubcontest(context.Context, *connect.Request[v1.DeleteSubcontestRequest]) (*connect.Response[v1.DeleteSubcontestResponse], error)
+	JoinSubcontest(context.Context, *connect.Request[v1.JoinSubcontestRequest]) (*connect.Response[v1.JoinSubcontestResponse], error)
 }
 
 // NewContestServiceClient constructs a client for the api.v1.ContestService service. By default, it
@@ -109,6 +114,12 @@ func NewContestServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(contestServiceDeleteSubcontestMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		joinSubcontest: connect.NewClient[v1.JoinSubcontestRequest, v1.JoinSubcontestResponse](
+			httpClient,
+			baseURL+ContestServiceJoinSubcontestProcedure,
+			connect.WithSchema(contestServiceJoinSubcontestMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -119,6 +130,7 @@ type contestServiceClient struct {
 	listSubcontests  *connect.Client[v1.ListSubcontestsRequest, v1.ListSubcontestsResponse]
 	createSubcontest *connect.Client[v1.CreateSubcontestRequest, v1.CreateSubcontestResponse]
 	deleteSubcontest *connect.Client[v1.DeleteSubcontestRequest, v1.DeleteSubcontestResponse]
+	joinSubcontest   *connect.Client[v1.JoinSubcontestRequest, v1.JoinSubcontestResponse]
 }
 
 // ListContests calls api.v1.ContestService.ListContests.
@@ -146,6 +158,11 @@ func (c *contestServiceClient) DeleteSubcontest(ctx context.Context, req *connec
 	return c.deleteSubcontest.CallUnary(ctx, req)
 }
 
+// JoinSubcontest calls api.v1.ContestService.JoinSubcontest.
+func (c *contestServiceClient) JoinSubcontest(ctx context.Context, req *connect.Request[v1.JoinSubcontestRequest]) (*connect.Response[v1.JoinSubcontestResponse], error) {
+	return c.joinSubcontest.CallUnary(ctx, req)
+}
+
 // ContestServiceHandler is an implementation of the api.v1.ContestService service.
 type ContestServiceHandler interface {
 	ListContests(context.Context, *connect.Request[v1.ListContestsRequest]) (*connect.Response[v1.ListContestsResponse], error)
@@ -153,6 +170,7 @@ type ContestServiceHandler interface {
 	ListSubcontests(context.Context, *connect.Request[v1.ListSubcontestsRequest]) (*connect.Response[v1.ListSubcontestsResponse], error)
 	CreateSubcontest(context.Context, *connect.Request[v1.CreateSubcontestRequest]) (*connect.Response[v1.CreateSubcontestResponse], error)
 	DeleteSubcontest(context.Context, *connect.Request[v1.DeleteSubcontestRequest]) (*connect.Response[v1.DeleteSubcontestResponse], error)
+	JoinSubcontest(context.Context, *connect.Request[v1.JoinSubcontestRequest]) (*connect.Response[v1.JoinSubcontestResponse], error)
 }
 
 // NewContestServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -191,6 +209,12 @@ func NewContestServiceHandler(svc ContestServiceHandler, opts ...connect.Handler
 		connect.WithSchema(contestServiceDeleteSubcontestMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	contestServiceJoinSubcontestHandler := connect.NewUnaryHandler(
+		ContestServiceJoinSubcontestProcedure,
+		svc.JoinSubcontest,
+		connect.WithSchema(contestServiceJoinSubcontestMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/api.v1.ContestService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ContestServiceListContestsProcedure:
@@ -203,6 +227,8 @@ func NewContestServiceHandler(svc ContestServiceHandler, opts ...connect.Handler
 			contestServiceCreateSubcontestHandler.ServeHTTP(w, r)
 		case ContestServiceDeleteSubcontestProcedure:
 			contestServiceDeleteSubcontestHandler.ServeHTTP(w, r)
+		case ContestServiceJoinSubcontestProcedure:
+			contestServiceJoinSubcontestHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -230,4 +256,8 @@ func (UnimplementedContestServiceHandler) CreateSubcontest(context.Context, *con
 
 func (UnimplementedContestServiceHandler) DeleteSubcontest(context.Context, *connect.Request[v1.DeleteSubcontestRequest]) (*connect.Response[v1.DeleteSubcontestResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.ContestService.DeleteSubcontest is not implemented"))
+}
+
+func (UnimplementedContestServiceHandler) JoinSubcontest(context.Context, *connect.Request[v1.JoinSubcontestRequest]) (*connect.Response[v1.JoinSubcontestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.ContestService.JoinSubcontest is not implemented"))
 }

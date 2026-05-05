@@ -105,6 +105,61 @@ export class Contest extends Message<Contest> {
 }
 
 /**
+ * @generated from message api.v1.Subcontest
+ */
+export class Subcontest extends Message<Subcontest> {
+  /**
+   * @generated from field: string title = 1;
+   */
+  title = "";
+
+  /**
+   * @generated from field: string slug = 2;
+   */
+  slug = "";
+
+  /**
+   * @generated from field: bool is_owner = 3;
+   */
+  isOwner = false;
+
+  /**
+   * @generated from field: bool is_member = 4;
+   */
+  isMember = false;
+
+  constructor(data?: PartialMessage<Subcontest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.Subcontest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "is_owner", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "is_member", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subcontest {
+    return new Subcontest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subcontest {
+    return new Subcontest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subcontest {
+    return new Subcontest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Subcontest | PlainMessage<Subcontest> | undefined, b: Subcontest | PlainMessage<Subcontest> | undefined): boolean {
+    return proto3.util.equals(Subcontest, a, b);
+  }
+}
+
+/**
  * @generated from message api.v1.Country
  */
 export class Country extends Message<Country> {

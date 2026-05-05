@@ -17,10 +17,9 @@ type usersTable struct {
 	postgres.Table
 
 	// Columns
-	ID        postgres.ColumnString
-	Email     postgres.ColumnString
-	Username  postgres.ColumnString
-	DeletedAt postgres.ColumnTimestampz
+	ID       postgres.ColumnString
+	Email    postgres.ColumnString
+	Username postgres.ColumnString
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -62,23 +61,21 @@ func newUsersTable(schemaName, tableName, alias string) *UsersTable {
 
 func newUsersTableImpl(schemaName, tableName, alias string) usersTable {
 	var (
-		IDColumn        = postgres.StringColumn("id")
-		EmailColumn     = postgres.StringColumn("email")
-		UsernameColumn  = postgres.StringColumn("username")
-		DeletedAtColumn = postgres.TimestampzColumn("deleted_at")
-		allColumns      = postgres.ColumnList{IDColumn, EmailColumn, UsernameColumn, DeletedAtColumn}
-		mutableColumns  = postgres.ColumnList{EmailColumn, UsernameColumn, DeletedAtColumn}
-		defaultColumns  = postgres.ColumnList{IDColumn}
+		IDColumn       = postgres.StringColumn("id")
+		EmailColumn    = postgres.StringColumn("email")
+		UsernameColumn = postgres.StringColumn("username")
+		allColumns     = postgres.ColumnList{IDColumn, EmailColumn, UsernameColumn}
+		mutableColumns = postgres.ColumnList{EmailColumn, UsernameColumn}
+		defaultColumns = postgres.ColumnList{IDColumn}
 	)
 
 	return usersTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:        IDColumn,
-		Email:     EmailColumn,
-		Username:  UsernameColumn,
-		DeletedAt: DeletedAtColumn,
+		ID:       IDColumn,
+		Email:    EmailColumn,
+		Username: UsernameColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
