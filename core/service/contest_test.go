@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -12,10 +13,17 @@ import (
 
 type mockContestRepository struct {
 	ports.ContestRepository
-	listContestsFunc    func(ctx context.Context) ([]entity.Contest, error)
-	createContestFunc   func(ctx context.Context, contest *entity.Contest) error
-	createCountriesFunc func(ctx context.Context, countries []entity.Country) error
-	createMatchesFunc   func(ctx context.Context, contestID string, matches []entity.Match) error
+	listContestsFunc            func(ctx context.Context) ([]entity.Contest, error)
+	createContestFunc           func(ctx context.Context, contest *entity.Contest) error
+	createCountriesFunc         func(ctx context.Context, countries []entity.Country) error
+	createMatchesFunc           func(ctx context.Context, contestID string, matches []entity.Match) error
+	getContestBySlugFunc        func(ctx context.Context, slug string) (*entity.Contest, error)
+	listSubcontestsFunc         func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error)
+	createSubcontestFunc        func(ctx context.Context, subcontest *entity.Subcontest) error
+	joinSubcontestFunc          func(ctx context.Context, subcontestID string, userID string) error
+	getSubcontestBySlugFunc     func(ctx context.Context, slug string) (*entity.Subcontest, error)
+	deleteSubcontestFunc        func(ctx context.Context, subcontestID string) error
+	getSubcontestByJoinCodeFunc func(ctx context.Context, joinCode string) (*entity.Subcontest, error)
 }
 
 func (m *mockContestRepository) ListContests(ctx context.Context) ([]entity.Contest, error) {
@@ -44,6 +52,55 @@ func (m *mockContestRepository) CreateMatches(ctx context.Context, contestID str
 		return m.createMatchesFunc(ctx, contestID, matches)
 	}
 	return nil
+}
+
+func (m *mockContestRepository) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
+	if m.getContestBySlugFunc != nil {
+		return m.getContestBySlugFunc(ctx, slug)
+	}
+	return nil, nil
+}
+
+func (m *mockContestRepository) ListSubcontests(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error) {
+	if m.listSubcontestsFunc != nil {
+		return m.listSubcontestsFunc(ctx, userID, contestSlug)
+	}
+	return nil, nil
+}
+
+func (m *mockContestRepository) CreateSubcontest(ctx context.Context, subcontest *entity.Subcontest) error {
+	if m.createSubcontestFunc != nil {
+		return m.createSubcontestFunc(ctx, subcontest)
+	}
+	return nil
+}
+
+func (m *mockContestRepository) JoinSubcontest(ctx context.Context, subcontestID string, userID string) error {
+	if m.joinSubcontestFunc != nil {
+		return m.joinSubcontestFunc(ctx, subcontestID, userID)
+	}
+	return nil
+}
+
+func (m *mockContestRepository) GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error) {
+	if m.getSubcontestBySlugFunc != nil {
+		return m.getSubcontestBySlugFunc(ctx, slug)
+	}
+	return nil, nil
+}
+
+func (m *mockContestRepository) DeleteSubcontest(ctx context.Context, subcontestID string) error {
+	if m.deleteSubcontestFunc != nil {
+		return m.deleteSubcontestFunc(ctx, subcontestID)
+	}
+	return nil
+}
+
+func (m *mockContestRepository) GetSubcontestByJoinCode(ctx context.Context, joinCode string) (*entity.Subcontest, error) {
+	if m.getSubcontestByJoinCodeFunc != nil {
+		return m.getSubcontestByJoinCodeFunc(ctx, joinCode)
+	}
+	return nil, nil
 }
 
 func TestContestService_ListContests(t *testing.T) {
@@ -106,8 +163,8 @@ func TestContestService_CreateContest(t *testing.T) {
 		}
 
 		contest := entity.Contest{
-			Title:  "2026 FIFA World Cup",
-			Groups: groups,
+			Title:              "2026 FIFA World Cup",
+			Groups:             groups,
 			GroupUnlockDate:    time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC),
 			GroupLockDate:      time.Date(2026, 6, 11, 0, 0, 0, 0, time.UTC),
 			KnockoutUnlockDate: time.Date(2026, 6, 26, 0, 0, 0, 0, time.UTC),
@@ -177,5 +234,177 @@ func TestContestService_CreateContest(t *testing.T) {
 		require.Equal(t, 4, knockoutByRound[3])
 		require.Equal(t, 2, knockoutByRound[4])
 		require.Equal(t, 2, knockoutByRound[5])
+	})
+}
+
+func TestContestService_ListSubcontests(t *testing.T) {
+	t.Run("should list subcontests", func(t *testing.T) {
+		expectedSubcontests := []entity.Subcontest{
+			{ID: "1", Title: "Subcontest 1", Slug: "subcontest-1", UserID: "user-1", ContestID: "contest-1"},
+			{ID: "2", Title: "Subcontest 2", Slug: "subcontest-2", UserID: "user-1", ContestID: "contest-1"},
+		}
+
+		mockRepo := &mockContestRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{ID: "contest-1"}, nil
+			},
+			listSubcontestsFunc: func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error) {
+				return expectedSubcontests, nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		subcontests, err := svc.ListSubcontests(context.Background(), "user-1", "world-cup-2026")
+		require.NoError(t, err)
+		require.Equal(t, expectedSubcontests, subcontests)
+	})
+
+	t.Run("should return error if contest not found", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return nil, errors.New("contest not found")
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		_, err := svc.ListSubcontests(context.Background(), "user-1", "world-cup-2026")
+		require.Error(t, err)
+		require.Equal(t, "contest not found", err.Error())
+	})
+}
+
+func TestContestService_CreateSubcontest(t *testing.T) {
+	t.Run("should create subcontest with self-join", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{ID: "contest-1"}, nil
+			},
+			createSubcontestFunc: func(ctx context.Context, subcontest *entity.Subcontest) error {
+				return nil
+			},
+			joinSubcontestFunc: func(ctx context.Context, subcontestID string, userID string) error {
+				return nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		joinCode, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", true)
+		require.NoError(t, err)
+		require.NotEmpty(t, joinCode)
+	})
+
+	t.Run("should create subcontest without self-join", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{ID: "contest-1"}, nil
+			},
+			createSubcontestFunc: func(ctx context.Context, subcontest *entity.Subcontest) error {
+				return nil
+			},
+			joinSubcontestFunc: func(ctx context.Context, subcontestID string, userID string) error {
+				return nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		joinCode, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", false)
+		require.NoError(t, err)
+		require.NotEmpty(t, joinCode)
+	})
+
+	t.Run("should return error if contest not found", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return nil, errors.New("contest not found")
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		_, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", true)
+		require.Error(t, err)
+		require.Equal(t, "contest not found", err.Error())
+	})
+}
+
+func TestContestService_DeleteSubcontest(t *testing.T) {
+	t.Run("should delete subcontest", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getSubcontestBySlugFunc: func(ctx context.Context, slug string) (*entity.Subcontest, error) {
+				return &entity.Subcontest{ID: "subcontest-1", UserID: "user-1"}, nil
+			},
+			deleteSubcontestFunc: func(ctx context.Context, subcontestID string) error {
+				return nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		err := svc.DeleteSubcontest(context.Background(), "user-1", "subcontest-1")
+		require.NoError(t, err)
+	})
+
+	t.Run("should return error if subcontest not found", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getSubcontestBySlugFunc: func(ctx context.Context, slug string) (*entity.Subcontest, error) {
+				return nil, errors.New("subcontest not found")
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		err := svc.DeleteSubcontest(context.Background(), "user-1", "subcontest-1")
+		require.Error(t, err)
+		require.Equal(t, "subcontest not found", err.Error())
+	})
+
+	t.Run("should return error if not owner", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getSubcontestBySlugFunc: func(ctx context.Context, slug string) (*entity.Subcontest, error) {
+				return &entity.Subcontest{ID: "subcontest-1", UserID: "user-2"}, nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		err := svc.DeleteSubcontest(context.Background(), "user-1", "subcontest-1")
+		require.Error(t, err)
+		require.Equal(t, "not owner", err.Error())
+	})
+}
+
+func TestContestService_JoinSubcontest(t *testing.T) {
+	t.Run("should join subcontest", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getSubcontestByJoinCodeFunc: func(ctx context.Context, joinCode string) (*entity.Subcontest, error) {
+				return &entity.Subcontest{ID: "subcontest-1"}, nil
+			},
+			joinSubcontestFunc: func(ctx context.Context, subcontestID string, userID string) error {
+				return nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		err := svc.JoinSubcontest(context.Background(), "user-1", "JOIN")
+		require.NoError(t, err)
+	})
+
+	t.Run("should return error if subcontest not found", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			getSubcontestByJoinCodeFunc: func(ctx context.Context, joinCode string) (*entity.Subcontest, error) {
+				return nil, nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		err := svc.JoinSubcontest(context.Background(), "user-1", "invalid")
+		require.Error(t, err)
+		require.Equal(t, "invalid join code", err.Error())
 	})
 }

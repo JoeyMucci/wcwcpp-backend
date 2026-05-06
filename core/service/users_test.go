@@ -51,3 +51,40 @@ func TestUsersService_CountUsers(t *testing.T) {
 		})
 	}
 }
+
+func TestUsersService_DeleteUser(t *testing.T) {
+	tests := []struct {
+		name      string
+		mockErr   error
+		expectErr bool
+	}{
+		{
+			name:      "success",
+			mockErr:   nil,
+			expectErr: false,
+		},
+		{
+			name:      "error",
+			mockErr:   errors.New("db error"),
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &mockUserRepository{
+				deleteUserFunc: func(ctx context.Context, userID string) error {
+					return tt.mockErr
+				},
+			}
+			svc := NewUsersService(repo)
+
+			err := svc.DeleteUser(context.Background(), "user-id")
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
