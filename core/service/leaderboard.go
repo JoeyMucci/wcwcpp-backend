@@ -15,10 +15,10 @@ func NewLeaderboardService() *LeaderboardService {
 	return &LeaderboardService{}
 }
 
-func (s *LeaderboardService) Leaderboard(ctx context.Context, contestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error) {
-	return nil, "", nil
+func (s *LeaderboardService) Leaderboard(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+	return nil, nil
 }
 
-func (s *LeaderboardService) Subleaderboard(ctx context.Context, subcontestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error) {
-	return nil, "", nil
+func (s *LeaderboardService) Subleaderboard(ctx context.Context, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+	return nil, nil
 }

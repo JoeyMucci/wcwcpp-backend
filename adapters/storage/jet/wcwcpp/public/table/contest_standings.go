@@ -17,9 +17,10 @@ type contestStandingsTable struct {
 	postgres.Table
 
 	// Columns
-	ContestID postgres.ColumnString
-	UserID    postgres.ColumnString
-	Score     postgres.ColumnInteger
+	ContestID     postgres.ColumnString
+	UserID        postgres.ColumnString
+	GroupScore    postgres.ColumnInteger
+	KnockoutScore postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -61,21 +62,23 @@ func newContestStandingsTable(schemaName, tableName, alias string) *ContestStand
 
 func newContestStandingsTableImpl(schemaName, tableName, alias string) contestStandingsTable {
 	var (
-		ContestIDColumn = postgres.StringColumn("contest_id")
-		UserIDColumn    = postgres.StringColumn("user_id")
-		ScoreColumn     = postgres.IntegerColumn("score")
-		allColumns      = postgres.ColumnList{ContestIDColumn, UserIDColumn, ScoreColumn}
-		mutableColumns  = postgres.ColumnList{ScoreColumn}
-		defaultColumns  = postgres.ColumnList{}
+		ContestIDColumn     = postgres.StringColumn("contest_id")
+		UserIDColumn        = postgres.StringColumn("user_id")
+		GroupScoreColumn    = postgres.IntegerColumn("group_score")
+		KnockoutScoreColumn = postgres.IntegerColumn("knockout_score")
+		allColumns          = postgres.ColumnList{ContestIDColumn, UserIDColumn, GroupScoreColumn, KnockoutScoreColumn}
+		mutableColumns      = postgres.ColumnList{GroupScoreColumn, KnockoutScoreColumn}
+		defaultColumns      = postgres.ColumnList{}
 	)
 
 	return contestStandingsTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ContestID: ContestIDColumn,
-		UserID:    UserIDColumn,
-		Score:     ScoreColumn,
+		ContestID:     ContestIDColumn,
+		UserID:        UserIDColumn,
+		GroupScore:    GroupScoreColumn,
+		KnockoutScore: KnockoutScoreColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

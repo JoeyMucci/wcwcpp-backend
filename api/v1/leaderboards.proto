@@ -9,24 +9,26 @@ import "buf/validate/validate.proto";
 
 message LeaderboardRequest {
     string contest_slug = 1;
-    int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
-    string page_token = 3;
+    int32 limit = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+    int32 offset = 3;
 }
 
 message LeaderboardResponse {
-    repeated LeaderboardEntry leaderboard = 1;
-    string next_page_token = 2;
+    repeated LeaderboardEntry group = 1;
+    repeated LeaderboardEntry knockout = 2;
+    repeated LeaderboardEntry overall = 3;
 }
 
 message SubleaderboardRequest {
     string subcontest_slug = 1;
-    int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
-    string page_token = 3;
+    int32 limit = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+    int32 offset = 3;
 }
 
 message SubleaderboardResponse {
-    repeated LeaderboardEntry subleaderboard = 1;
-    string next_page_token = 2;
+    repeated LeaderboardEntry group = 1;
+    repeated LeaderboardEntry knockout = 2;
+    repeated LeaderboardEntry overall = 3;
 }
 
 service LeaderboardService {

@@ -39,7 +39,10 @@ type Match struct {
 }
 type GroupPick struct{}
 type KnockoutPick struct{}
-type LeaderboardEntry struct{}
+type LeaderboardEntry struct {
+	Name  string
+	Score int64
+}
 type Group struct {
 	Letter    string
 	Countries []Country

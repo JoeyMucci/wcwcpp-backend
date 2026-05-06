@@ -12,7 +12,8 @@ import (
 )
 
 type ContestStandings struct {
-	ContestID uuid.UUID `sql:"primary_key"`
-	UserID    uuid.UUID `sql:"primary_key"`
-	Score     int32
+	ContestID     uuid.UUID `sql:"primary_key"`
+	UserID        uuid.UUID `sql:"primary_key"`
+	GroupScore    int32
+	KnockoutScore int32
 }

@@ -17,14 +17,14 @@ export class LeaderboardRequest extends Message<LeaderboardRequest> {
   contestSlug = "";
 
   /**
-   * @generated from field: int32 page_size = 2;
+   * @generated from field: int32 limit = 2;
    */
-  pageSize = 0;
+  limit = 0;
 
   /**
-   * @generated from field: string page_token = 3;
+   * @generated from field: int32 offset = 3;
    */
-  pageToken = "";
+  offset = 0;
 
   constructor(data?: PartialMessage<LeaderboardRequest>) {
     super();
@@ -35,8 +35,8 @@ export class LeaderboardRequest extends Message<LeaderboardRequest> {
   static readonly typeName = "api.v1.LeaderboardRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LeaderboardRequest {
@@ -61,14 +61,19 @@ export class LeaderboardRequest extends Message<LeaderboardRequest> {
  */
 export class LeaderboardResponse extends Message<LeaderboardResponse> {
   /**
-   * @generated from field: repeated api.v1.LeaderboardEntry leaderboard = 1;
+   * @generated from field: repeated api.v1.LeaderboardEntry group = 1;
    */
-  leaderboard: LeaderboardEntry[] = [];
+  group: LeaderboardEntry[] = [];
 
   /**
-   * @generated from field: string next_page_token = 2;
+   * @generated from field: repeated api.v1.LeaderboardEntry knockout = 2;
    */
-  nextPageToken = "";
+  knockout: LeaderboardEntry[] = [];
+
+  /**
+   * @generated from field: repeated api.v1.LeaderboardEntry overall = 3;
+   */
+  overall: LeaderboardEntry[] = [];
 
   constructor(data?: PartialMessage<LeaderboardResponse>) {
     super();
@@ -78,8 +83,9 @@ export class LeaderboardResponse extends Message<LeaderboardResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.LeaderboardResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "leaderboard", kind: "message", T: LeaderboardEntry, repeated: true },
-    { no: 2, name: "next_page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "group", kind: "message", T: LeaderboardEntry, repeated: true },
+    { no: 2, name: "knockout", kind: "message", T: LeaderboardEntry, repeated: true },
+    { no: 3, name: "overall", kind: "message", T: LeaderboardEntry, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LeaderboardResponse {
@@ -109,14 +115,14 @@ export class SubleaderboardRequest extends Message<SubleaderboardRequest> {
   subcontestSlug = "";
 
   /**
-   * @generated from field: int32 page_size = 2;
+   * @generated from field: int32 limit = 2;
    */
-  pageSize = 0;
+  limit = 0;
 
   /**
-   * @generated from field: string page_token = 3;
+   * @generated from field: int32 offset = 3;
    */
-  pageToken = "";
+  offset = 0;
 
   constructor(data?: PartialMessage<SubleaderboardRequest>) {
     super();
@@ -127,8 +133,8 @@ export class SubleaderboardRequest extends Message<SubleaderboardRequest> {
   static readonly typeName = "api.v1.SubleaderboardRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subcontest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "page_size", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubleaderboardRequest {
@@ -153,14 +159,19 @@ export class SubleaderboardRequest extends Message<SubleaderboardRequest> {
  */
 export class SubleaderboardResponse extends Message<SubleaderboardResponse> {
   /**
-   * @generated from field: repeated api.v1.LeaderboardEntry subleaderboard = 1;
+   * @generated from field: repeated api.v1.LeaderboardEntry group = 1;
    */
-  subleaderboard: LeaderboardEntry[] = [];
+  group: LeaderboardEntry[] = [];
 
   /**
-   * @generated from field: string next_page_token = 2;
+   * @generated from field: repeated api.v1.LeaderboardEntry knockout = 2;
    */
-  nextPageToken = "";
+  knockout: LeaderboardEntry[] = [];
+
+  /**
+   * @generated from field: repeated api.v1.LeaderboardEntry overall = 3;
+   */
+  overall: LeaderboardEntry[] = [];
 
   constructor(data?: PartialMessage<SubleaderboardResponse>) {
     super();
@@ -170,8 +181,9 @@ export class SubleaderboardResponse extends Message<SubleaderboardResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.SubleaderboardResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "subleaderboard", kind: "message", T: LeaderboardEntry, repeated: true },
-    { no: 2, name: "next_page_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "group", kind: "message", T: LeaderboardEntry, repeated: true },
+    { no: 2, name: "knockout", kind: "message", T: LeaderboardEntry, repeated: true },
+    { no: 3, name: "overall", kind: "message", T: LeaderboardEntry, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubleaderboardResponse {

@@ -16,8 +16,8 @@ type ContestService interface {
 }
 
 type LeaderboardService interface {
-	Leaderboard(ctx context.Context, contestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error)
-	Subleaderboard(ctx context.Context, subcontestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error)
+	Leaderboard(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
+	Subleaderboard(ctx context.Context, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 }
 
 type MatchService interface {
