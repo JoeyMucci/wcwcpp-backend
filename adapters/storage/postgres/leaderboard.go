@@ -127,6 +127,34 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	return leaderboard, nil
 }
 
+func (r *LeaderboardRepository) HasSubcontestAccess(ctx context.Context, userID string, subcontestSlug string) (bool, error) {
+	stmt := postgres.SELECT(table.Subcontests.AllColumns).
+		FROM(table.Subcontests).
+		WHERE(table.Subcontests.Slug.EQ(postgres.String(subcontestSlug)))
+	var dest model.Subcontests
+	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+		return false, err
+	}
+
+	// owner
+	if dest.UserID.String() == userID {
+		return true, nil
+	}
+
+	stmt = postgres.SELECT(table.SubcontestEntries.AllColumns).
+		FROM(table.SubcontestEntries).
+		WHERE(postgres.AND(table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(dest.ID)),
+			table.SubcontestEntries.UserID.EQ(postgres.String(userID))))
+	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+		// no rows in entries -> not a member
+		if errors.Is(err, qrm.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (r *LeaderboardRepository) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
 	stmt := postgres.SELECT(table.Contests.AllColumns).
 		FROM(table.Contests).

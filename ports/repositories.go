@@ -38,5 +38,6 @@ type UserRepository interface {
 type LeaderboardRepository interface {
 	Leaderboard(ctx context.Context, contestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 	Subleaderboard(ctx context.Context, subcontestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
+	HasSubcontestAccess(ctx context.Context, userID string, subcontestSlug string) (bool, error)
 	ContestSearch
 }
