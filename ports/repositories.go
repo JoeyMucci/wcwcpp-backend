@@ -41,3 +41,8 @@ type LeaderboardRepository interface {
 	HasSubcontestAccess(ctx context.Context, userID string, subcontestSlug string) (bool, error)
 	ContestSearch
 }
+
+type StandingsRepository interface {
+	IncrementUserGroupScore(ctx context.Context, userID string, contestID string, score int)
+	IncrementUserKnockoutScore(ctx context.Context, userID string, contestID string, score int)
+}

@@ -10,7 +10,7 @@ import (
 )
 
 func TestUserRepository_CountUsers(t *testing.T) {
-	repo := NewUserRepository(setupTestDB(t).db)
+	repo := NewUserRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	// Initial count
@@ -31,7 +31,7 @@ func TestUserRepository_CountUsers(t *testing.T) {
 }
 
 func TestUserRepository_DeleteUser(t *testing.T) {
-	repo := NewUserRepository(setupTestDB(t).db)
+	repo := NewUserRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	// Create user to delete
@@ -45,7 +45,7 @@ func TestUserRepository_DeleteUser(t *testing.T) {
 	// Verify not found
 	_, err = repo.FindByEmail(ctx, "delete@example.com")
 	assert.NoError(t, err) // FindByEmail returns nil, nil if not found
-	
+
 	// Delete non-existent user should fail
 	err = repo.DeleteUser(ctx, uuid.New().String())
 	assert.Error(t, err)
