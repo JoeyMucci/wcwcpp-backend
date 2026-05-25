@@ -169,6 +169,84 @@ func TestLeaderboardRepository_Subleaderboard(t *testing.T) {
 	assert.Equal(t, "Alice", knockout[1].Name)
 }
 
+// TestLeaderboardRepository_Subleaderboard_MultiContestIsolation verifies that when a user
+// has standings in multiple contests, the subleaderboard only returns scores from the
+// contest that the subcontest belongs to — not cross-contaminated scores from other contests.
+func TestLeaderboardRepository_Subleaderboard_MultiContestIsolation(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewLeaderboardRepository(db)
+	ctx := context.Background()
+
+	// 1. Create two contests
+	contestAID := uuid.New().String()
+	contestBID := uuid.New().String()
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO contests (id, title, slug, group_unlock_date, group_lock_date, knockout_unlock_date, knockout_lock_date) VALUES
+		($1, 'Contest A', 'contest-a', $3, $3, $3, $3),
+		($2, 'Contest B', 'contest-b', $3, $3, $3, $3)`,
+		contestAID, contestBID, time.Now(),
+	)
+	require.NoError(t, err)
+
+	// 2. Create users
+	aliceID := uuid.New().String()
+	bobID := uuid.New().String()
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO users (id, email, username) VALUES
+		($1, 'alice@example.com', 'Alice'),
+		($2, 'bob@example.com', 'Bob')`,
+		aliceID, bobID,
+	)
+	require.NoError(t, err)
+
+	// 3. Both users have standings in BOTH contests.
+	// Scores for Contest A (the correct one):  Alice=10, Bob=8
+	// Scores for Contest B (the decoy):        Alice=99, Bob=99 — must NOT appear
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO contest_standings (contest_id, user_id, group_score, knockout_score) VALUES
+		($1, $3, 10, 5),
+		($1, $4, 8,  12),
+		($2, $3, 99, 99),
+		($2, $4, 99, 99)`,
+		contestAID, contestBID, aliceID, bobID,
+	)
+	require.NoError(t, err)
+
+	// 4. Subcontest belongs to Contest A
+	subcontestID := uuid.New().String()
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO subcontests (id, contest_id, user_id, join_code, title, slug)
+		VALUES ($1, $2, $3, 'ISOLTEST', 'Isolation Test League', 'isolation-test-league')`,
+		subcontestID, contestAID, aliceID,
+	)
+	require.NoError(t, err)
+
+	// 5. Both Alice and Bob are members
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO subcontest_entries (subcontest_id, user_id) VALUES ($1, $2), ($1, $3)`,
+		subcontestID, aliceID, bobID,
+	)
+	require.NoError(t, err)
+
+	result, err := repo.Subleaderboard(ctx, subcontestID, 10, 0)
+	require.NoError(t, err)
+
+	// Scores must come from Contest A only (10, 8, 5, 12) — NOT Contest B (99)
+	group := result["group"]
+	require.Len(t, group, 2, "expected exactly 2 entries, not duplicates from Contest B")
+	assert.Equal(t, "Alice", group[0].Name)
+	assert.Equal(t, int64(10), group[0].Score)
+	assert.Equal(t, "Bob", group[1].Name)
+	assert.Equal(t, int64(8), group[1].Score)
+
+	knockout := result["knockout"]
+	require.Len(t, knockout, 2, "expected exactly 2 entries, not duplicates from Contest B")
+	assert.Equal(t, "Bob", knockout[0].Name)
+	assert.Equal(t, int64(12), knockout[0].Score)
+	assert.Equal(t, "Alice", knockout[1].Name)
+	assert.Equal(t, int64(5), knockout[1].Score)
+}
+
 func TestLeaderboardRepository_HasSubcontestAccess(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewLeaderboardRepository(db)
