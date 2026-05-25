@@ -53,5 +53,8 @@ type PicksRepository interface {
 	ListGroupPicks(ctx context.Context, userID string, contestID string) ([]entity.GroupPick, error)
 	ListGroupStandings(ctx context.Context, contestID string) ([]entity.GroupStanding, error)
 	CreateGroupPicks(ctx context.Context, userID string, contestID string, picks []entity.GroupPick) error
+	ListKnockoutPicks(ctx context.Context, userID string, contestID string) (entity.KnockoutPick, error)
+	ListKnockoutResults(ctx context.Context, contestID string) (entity.KnockoutPick, error)
+	CreateKnockoutPicks(ctx context.Context, userID string, contestID string, pick entity.KnockoutPick) error
 	Search
 }

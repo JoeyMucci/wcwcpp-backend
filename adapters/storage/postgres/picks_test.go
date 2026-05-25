@@ -168,3 +168,116 @@ func TestPicksRepository_ListGroupPicks(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, emptyPicks)
 }
+
+func TestPicksRepository_CreateGroupPicks(t *testing.T) {
+	repo, contestID, codeToID := setupPicksTest(t)
+	ctx := context.Background()
+	db := repo.db
+
+	userID := uuid.New().String()
+	_, err := db.ExecContext(ctx, "INSERT INTO users (id, email, username) VALUES ($1, $2, $3)",
+		userID, userID+"@example.com", "creator-"+userID[:6])
+	require.NoError(t, err)
+
+	var codes []string
+	for code := range codeToID {
+		codes = append(codes, code)
+	}
+
+	newPicks := []entity.GroupPick{
+		{
+			Letter: "A",
+			Entries: []entity.GroupPickEntry{
+				{Country: entity.Country{Code: codes[0]}, Place: 1},
+				{Country: entity.Country{Code: codes[1]}, Place: 2},
+			},
+			ExtraQualifier: true,
+		},
+	}
+
+	err = repo.CreateGroupPicks(ctx, userID, contestID, newPicks)
+	require.NoError(t, err)
+
+	// Direct DB query verification
+	var count int
+	err = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM group_picks WHERE user_id = $1 AND contest_id = $2",
+		userID, contestID).Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+}
+
+func TestPicksRepository_KnockoutPicks(t *testing.T) {
+	repo, contestID, codeToID := setupPicksTest(t)
+	ctx := context.Background()
+	db := repo.db
+
+	userID := uuid.New().String()
+	_, err := db.ExecContext(ctx, "INSERT INTO users (id, email, username) VALUES ($1, $2, $3)",
+		userID, userID+"@example.com", "kpicker-"+userID[:6])
+	require.NoError(t, err)
+
+	var codes []string
+	for code := range codeToID {
+		codes = append(codes, code)
+	}
+
+	pickPayload := entity.KnockoutPick{
+		Entries: []entity.KnockoutPickEntry{
+			{Country: entity.Country{Code: codes[0]}, Round: 16},
+			{Country: entity.Country{Code: codes[1]}, Round: 8},
+		},
+	}
+
+	// 1. Create picks
+	err = repo.CreateKnockoutPicks(ctx, userID, contestID, pickPayload)
+	require.NoError(t, err)
+
+	// 2. Fetch picks
+	picks, err := repo.ListKnockoutPicks(ctx, userID, contestID)
+	require.NoError(t, err)
+	require.Len(t, picks.Entries, 2)
+	assert.Equal(t, 8, picks.Entries[0].Round)
+	assert.Equal(t, codes[1], picks.Entries[0].Country.Code)
+	assert.Equal(t, 16, picks.Entries[1].Round)
+	assert.Equal(t, codes[0], picks.Entries[1].Country.Code)
+}
+
+func TestPicksRepository_ListKnockoutResults(t *testing.T) {
+	repo, contestID, codeToID := setupPicksTest(t)
+	ctx := context.Background()
+	db := repo.db
+
+	var codes []string
+	for code := range codeToID {
+		codes = append(codes, code)
+	}
+
+	// Match 1: Outright win (Country 1 wins 2-1)
+	m1ID := uuid.New().String()
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO matches (id, contest_id, country1_id, country2_id, country1_goals, country2_goals, round, round_index)
+		VALUES ($1, $2, $3, $4, 2, 1, 16, 1)`,
+		m1ID, contestID, codeToID[codes[0]], codeToID[codes[1]])
+	require.NoError(t, err)
+
+	// Match 2: Penalty win (Draw 1-1, penalties 4-3 for Country 2)
+	m2ID := uuid.New().String()
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO matches (id, contest_id, country1_id, country2_id, country1_goals, country2_goals, country1_penalties, country2_penalties, round, round_index)
+		VALUES ($1, $2, $3, $4, 1, 1, 3, 4, 16, 2)`,
+		m2ID, contestID, codeToID[codes[2]], codeToID[codes[3]])
+	require.NoError(t, err)
+
+	results, err := repo.ListKnockoutResults(ctx, contestID)
+	require.NoError(t, err)
+
+	require.Len(t, results.Entries, 2)
+
+	// Match 1 winner should be codes[0]
+	assert.Equal(t, codes[0], results.Entries[0].Country.Code)
+	assert.Equal(t, 16, results.Entries[0].Round)
+
+	// Match 2 winner should be codes[3]
+	assert.Equal(t, codes[3], results.Entries[1].Country.Code)
+}
+

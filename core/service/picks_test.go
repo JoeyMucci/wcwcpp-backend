@@ -12,10 +12,15 @@ import (
 
 type mockPicksRepository struct {
 	ports.PicksRepository
-	getContestBySlugFunc   func(ctx context.Context, slug string) (*entity.Contest, error)
-	getSubcontestBySlugFunc func(ctx context.Context, slug string) (*entity.Subcontest, error)
-	listGroupPicksFunc     func(ctx context.Context, userID string, contestID string) ([]entity.GroupPick, error)
-	listGroupStandingsFunc func(ctx context.Context, contestID string) ([]entity.GroupStanding, error)
+	getContestBySlugFunc      func(ctx context.Context, slug string) (*entity.Contest, error)
+	getSubcontestBySlugFunc   func(ctx context.Context, slug string) (*entity.Subcontest, error)
+	listGroupPicksFunc        func(ctx context.Context, userID string, contestID string) ([]entity.GroupPick, error)
+	listGroupStandingsFunc    func(ctx context.Context, contestID string) ([]entity.GroupStanding, error)
+	createGroupPicksFunc      func(ctx context.Context, userID string, contestID string, picks []entity.GroupPick) error
+	listKnockoutPicksFunc     func(ctx context.Context, userID string, contestID string) (entity.KnockoutPick, error)
+	listKnockoutResultsFunc   func(ctx context.Context, contestID string) (entity.KnockoutPick, error)
+	createKnockoutPicksFunc   func(ctx context.Context, userID string, contestID string, pick entity.KnockoutPick) error
+	getCountryCodeToIDMapFunc func(ctx context.Context) (map[string]string, error)
 }
 
 func (m *mockPicksRepository) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
@@ -42,6 +47,41 @@ func (m *mockPicksRepository) ListGroupPicks(ctx context.Context, userID string,
 func (m *mockPicksRepository) ListGroupStandings(ctx context.Context, contestID string) ([]entity.GroupStanding, error) {
 	if m.listGroupStandingsFunc != nil {
 		return m.listGroupStandingsFunc(ctx, contestID)
+	}
+	return nil, nil
+}
+
+func (m *mockPicksRepository) CreateGroupPicks(ctx context.Context, userID string, contestID string, picks []entity.GroupPick) error {
+	if m.createGroupPicksFunc != nil {
+		return m.createGroupPicksFunc(ctx, userID, contestID, picks)
+	}
+	return nil
+}
+
+func (m *mockPicksRepository) ListKnockoutPicks(ctx context.Context, userID string, contestID string) (entity.KnockoutPick, error) {
+	if m.listKnockoutPicksFunc != nil {
+		return m.listKnockoutPicksFunc(ctx, userID, contestID)
+	}
+	return entity.KnockoutPick{}, nil
+}
+
+func (m *mockPicksRepository) ListKnockoutResults(ctx context.Context, contestID string) (entity.KnockoutPick, error) {
+	if m.listKnockoutResultsFunc != nil {
+		return m.listKnockoutResultsFunc(ctx, contestID)
+	}
+	return entity.KnockoutPick{}, nil
+}
+
+func (m *mockPicksRepository) CreateKnockoutPicks(ctx context.Context, userID string, contestID string, pick entity.KnockoutPick) error {
+	if m.createKnockoutPicksFunc != nil {
+		return m.createKnockoutPicksFunc(ctx, userID, contestID, pick)
+	}
+	return nil
+}
+
+func (m *mockPicksRepository) GetCountryCodeToIDMap(ctx context.Context) (map[string]string, error) {
+	if m.getCountryCodeToIDMapFunc != nil {
+		return m.getCountryCodeToIDMapFunc(ctx)
 	}
 	return nil, nil
 }
@@ -107,39 +147,87 @@ func TestPicksService_ListGroupPicks(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "db error", err.Error())
 	})
+}
 
-	t.Run("should propagate error from ListGroupPicks repo", func(t *testing.T) {
+func TestPicksService_CreateGroupPicks(t *testing.T) {
+	t.Run("should save picks on success", func(t *testing.T) {
 		repo := &mockPicksRepository{
 			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
 				return &entity.Contest{ID: "contest-1"}, nil
 			},
-			listGroupPicksFunc: func(ctx context.Context, userID string, contestID string) ([]entity.GroupPick, error) {
-				return nil, errors.New("picks query failed")
+			createGroupPicksFunc: func(ctx context.Context, userID string, contestID string, picks []entity.GroupPick) error {
+				require.Equal(t, "user-1", userID)
+				require.Equal(t, "contest-1", contestID)
+				require.Len(t, picks, 1)
+				return nil
 			},
 		}
 
 		svc := NewPicksService(repo)
-		_, _, err := svc.ListGroupPicks(context.Background(), "user-1", "world-cup-2026")
-		require.Error(t, err)
-		require.Equal(t, "picks query failed", err.Error())
+		err := svc.CreateGroupPicks(context.Background(), "user-1", "world-cup-2026", []entity.GroupPick{{Letter: "A"}})
+		require.NoError(t, err)
 	})
 
-	t.Run("should propagate error from ListGroupStandings repo", func(t *testing.T) {
+	t.Run("should return error if contest not found", func(t *testing.T) {
 		repo := &mockPicksRepository{
 			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
-				return &entity.Contest{ID: "contest-1"}, nil
-			},
-			listGroupPicksFunc: func(ctx context.Context, userID string, contestID string) ([]entity.GroupPick, error) {
 				return nil, nil
-			},
-			listGroupStandingsFunc: func(ctx context.Context, contestID string) ([]entity.GroupStanding, error) {
-				return nil, errors.New("standings query failed")
 			},
 		}
 
 		svc := NewPicksService(repo)
-		_, _, err := svc.ListGroupPicks(context.Background(), "user-1", "world-cup-2026")
+		err := svc.CreateGroupPicks(context.Background(), "user-1", "world-cup-2026", []entity.GroupPick{{Letter: "A"}})
 		require.Error(t, err)
-		require.Equal(t, "standings query failed", err.Error())
+		require.Equal(t, "contest not found", err.Error())
+	})
+}
+
+func TestPicksService_ListKnockoutPicks(t *testing.T) {
+	t.Run("should return picks and results on success", func(t *testing.T) {
+		samplePick := entity.KnockoutPick{Entries: []entity.KnockoutPickEntry{{Round: 16}}}
+		sampleResult := entity.KnockoutPick{Entries: []entity.KnockoutPickEntry{{Round: 8}}}
+
+		repo := &mockPicksRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{ID: "contest-1"}, nil
+			},
+			listKnockoutPicksFunc: func(ctx context.Context, userID string, contestID string) (entity.KnockoutPick, error) {
+				require.Equal(t, "user-1", userID)
+				require.Equal(t, "contest-1", contestID)
+				return samplePick, nil
+			},
+			listKnockoutResultsFunc: func(ctx context.Context, contestID string) (entity.KnockoutPick, error) {
+				require.Equal(t, "contest-1", contestID)
+				return sampleResult, nil
+			},
+		}
+
+		svc := NewPicksService(repo)
+		pick, result, err := svc.ListKnockoutPicks(context.Background(), "user-1", "world-cup-2026")
+		require.NoError(t, err)
+		require.Equal(t, samplePick, pick)
+		require.Equal(t, sampleResult, result)
+	})
+}
+
+func TestPicksService_CreateKnockoutPicks(t *testing.T) {
+	t.Run("should save picks on success", func(t *testing.T) {
+		samplePick := entity.KnockoutPick{Entries: []entity.KnockoutPickEntry{{Round: 16}}}
+
+		repo := &mockPicksRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{ID: "contest-1"}, nil
+			},
+			createKnockoutPicksFunc: func(ctx context.Context, userID string, contestID string, pick entity.KnockoutPick) error {
+				require.Equal(t, "user-1", userID)
+				require.Equal(t, "contest-1", contestID)
+				require.Equal(t, samplePick, pick)
+				return nil
+			},
+		}
+
+		svc := NewPicksService(repo)
+		err := svc.CreateKnockoutPicks(context.Background(), "user-1", "world-cup-2026", samplePick)
+		require.NoError(t, err)
 	})
 }
