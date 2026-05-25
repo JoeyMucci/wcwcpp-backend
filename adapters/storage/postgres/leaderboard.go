@@ -163,6 +163,9 @@ func (r *LeaderboardRepository) HasSubcontestAccess(ctx context.Context, userID 
 		WHERE(table.Subcontests.Slug.EQ(postgres.String(subcontestSlug)))
 	var dest model.Subcontests
 	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+		if errors.Is(err, qrm.ErrNoRows) {
+			return false, errors.New("subcontest not found")
+		}
 		return false, err
 	}
 
@@ -175,7 +178,8 @@ func (r *LeaderboardRepository) HasSubcontestAccess(ctx context.Context, userID 
 		FROM(table.SubcontestEntries).
 		WHERE(postgres.AND(table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(dest.ID)),
 			table.SubcontestEntries.UserID.EQ(postgres.UUID(parsedUserID))))
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+	var entriesDest model.SubcontestEntries
+	if err := stmt.QueryContext(ctx, r.db, &entriesDest); err != nil {
 		// no rows in entries -> not a member
 		if errors.Is(err, qrm.ErrNoRows) {
 			return false, nil
