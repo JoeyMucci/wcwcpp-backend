@@ -68,7 +68,7 @@ func newContestStandingsTableImpl(schemaName, tableName, alias string) contestSt
 		KnockoutScoreColumn = postgres.IntegerColumn("knockout_score")
 		allColumns          = postgres.ColumnList{ContestIDColumn, UserIDColumn, GroupScoreColumn, KnockoutScoreColumn}
 		mutableColumns      = postgres.ColumnList{GroupScoreColumn, KnockoutScoreColumn}
-		defaultColumns      = postgres.ColumnList{}
+		defaultColumns      = postgres.ColumnList{GroupScoreColumn, KnockoutScoreColumn}
 	)
 
 	return contestStandingsTable{
