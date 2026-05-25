@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -11,49 +9,10 @@ import (
 	"github.com/joey/wcwcpp-backend/core/entity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-func setupTestDB(t *testing.T) *ContestRepository {
-	ctx := context.Background()
-
-	pgContainer, err := postgres.Run(ctx,
-		"postgres:15-alpine",
-		postgres.WithInitScripts(filepath.Join("..", "..", "..", "db", "schema.sql")),
-		postgres.WithDatabase("wcwcpp-test"),
-		postgres.WithUsername("postgres"),
-		postgres.WithPassword("password"),
-	)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		require.NoError(t, pgContainer.Terminate(ctx))
-	})
-
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	require.NoError(t, err)
-
-	db, err := sql.Open("postgres", connStr)
-	require.NoError(t, err)
-
-	// Wait for DB to be truly ready
-	for range 10 {
-		if err = db.Ping(); err == nil {
-			break
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	require.NoError(t, err, "failed to connect to test container db")
-
-	t.Cleanup(func() {
-		db.Close()
-	})
-
-	return NewContestRepository(db)
-}
-
 func TestContestRepository_CreateContest(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	uniqueSuffix := uuid.New().String()
@@ -77,7 +36,7 @@ func TestContestRepository_CreateContest(t *testing.T) {
 }
 
 func TestContestRepository_CreateCountries(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 
 	ctx := context.Background()
 	uniqueSuffix1 := uuid.New().String()[:3]
@@ -108,7 +67,7 @@ func TestContestRepository_CreateCountries(t *testing.T) {
 }
 
 func TestContestRepository_CreateMatches(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	// 1. Setup a test contest
@@ -162,7 +121,7 @@ func TestContestRepository_CreateMatches(t *testing.T) {
 }
 
 func TestContestRepository_GetContestBySlug(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	now := time.Now().UTC().Truncate(time.Microsecond)
@@ -196,7 +155,7 @@ func TestContestRepository_GetContestBySlug(t *testing.T) {
 }
 
 func TestContestRepository_CreateSubcontest(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	// Setup a contest
@@ -231,7 +190,7 @@ func TestContestRepository_CreateSubcontest(t *testing.T) {
 }
 
 func TestContestRepository_JoinSubcontest(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	// Setup a contest
@@ -281,7 +240,7 @@ func TestContestRepository_JoinSubcontest(t *testing.T) {
 }
 
 func TestContestRepository_ListSubcontests(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	uniqueSuffix := uuid.New().String()
@@ -370,7 +329,7 @@ func TestContestRepository_ListSubcontests(t *testing.T) {
 }
 
 func TestContestRepository_GetSubcontestByJoinCode(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	uniqueSuffix := uuid.New().String()
@@ -411,7 +370,7 @@ func TestContestRepository_GetSubcontestByJoinCode(t *testing.T) {
 }
 
 func TestContestRepository_DeleteSubcontestAndGetBySlug(t *testing.T) {
-	repo := setupTestDB(t)
+	repo := NewContestRepository(setupTestDB(t))
 	ctx := context.Background()
 
 	uniqueSuffix := uuid.New().String()

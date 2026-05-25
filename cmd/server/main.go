@@ -35,6 +35,10 @@ func main() {
 	contestHandler := handler.NewContestHandler(contestService)
 	usersHandler := handler.NewUsersHandler(usersService)
 
+	leaderboardRepo := postgres.NewLeaderboardRepository(db)
+	leaderboardService := service.NewLeaderboardService(leaderboardRepo)
+	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
+
 	mux := http.NewServeMux()
 
 	// 5. Register RPC Handlers to the mux
@@ -46,6 +50,9 @@ func main() {
 
 	usersPath, usersSvcHandler := v1connect.NewUsersServiceHandler(usersHandler)
 	mux.Handle(usersPath, usersSvcHandler)
+
+	leaderboardPath, leaderboardSvcHandler := v1connect.NewLeaderboardServiceHandler(leaderboardHandler)
+	mux.Handle(leaderboardPath, leaderboardSvcHandler)
 
 	fmt.Println("Starting server on :8080")
 	// Use h2c for unencrypted HTTP/2 (required for Connect without TLS)

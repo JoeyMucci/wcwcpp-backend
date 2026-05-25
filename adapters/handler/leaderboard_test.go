@@ -3,47 +3,58 @@ package handler
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/joey/wcwcpp-backend/core/entity"
-	"github.com/joey/wcwcpp-backend/pkg/api/v1"
+	v1 "github.com/joey/wcwcpp-backend/pkg/api/v1"
 	"github.com/joey/wcwcpp-backend/ports"
 )
 
 type mockLeaderboardService struct {
 	ports.LeaderboardService
-	leaderboardFunc    func(ctx context.Context, contestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error)
-	subleaderboardFunc func(ctx context.Context, subcontestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error)
+	leaderboardFunc    func(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
+	subleaderboardFunc func(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 }
 
-func (m *mockLeaderboardService) Leaderboard(ctx context.Context, contestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error) {
-	return m.leaderboardFunc(ctx, contestSlug, pageSize, pageToken)
+func (m *mockLeaderboardService) Leaderboard(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+	return m.leaderboardFunc(ctx, contestSlug, limit, offset)
 }
 
-func (m *mockLeaderboardService) Subleaderboard(ctx context.Context, subcontestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error) {
-	return m.subleaderboardFunc(ctx, subcontestSlug, pageSize, pageToken)
+func (m *mockLeaderboardService) Subleaderboard(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+	return m.subleaderboardFunc(ctx, userID, subcontestSlug, limit, offset)
 }
 
 func TestLeaderboardHandler_Leaderboard(t *testing.T) {
 	tests := []struct {
 		name        string
-		mockFunc    func(ctx context.Context, contestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error)
+		mockFunc    func(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 		expectError bool
+		errCode     connect.Code
 	}{
 		{
 			name: "success",
-			mockFunc: func(ctx context.Context, contestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error) {
-				return []entity.LeaderboardEntry{{}}, "next_token", nil
+			mockFunc: func(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+				return map[string][]entity.LeaderboardEntry{"group": []entity.LeaderboardEntry{{}}}, nil
 			},
 			expectError: false,
 		},
 		{
-			name: "error",
-			mockFunc: func(ctx context.Context, contestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error) {
-				return nil, "", errors.New("service error")
+			name: "contest not found",
+			mockFunc: func(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+				return nil, errors.New("contest not found")
 			},
 			expectError: true,
+			errCode:     connect.CodeNotFound,
+		},
+		{
+			name: "error",
+			mockFunc: func(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+				return nil, errors.New("service error")
+			},
+			expectError: true,
+			errCode:     connect.CodeUnknown,
 		},
 	}
 
@@ -51,37 +62,78 @@ func TestLeaderboardHandler_Leaderboard(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := &mockLeaderboardService{leaderboardFunc: tt.mockFunc}
 			h := NewLeaderboardHandler(svc)
-			
-			resp, err := h.Leaderboard(context.Background(), connect.NewRequest(&v1.LeaderboardRequest{ContestSlug: "test", PageSize: 10, PageToken: "token"}))
+
+			resp, err := h.Leaderboard(context.Background(), connect.NewRequest(&v1.LeaderboardRequest{ContestSlug: "test", Limit: 10, Offset: 0}))
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error %v, got %v", tt.expectError, err)
 			}
-			if !tt.expectError && resp.Msg.NextPageToken != "next_token" {
-				t.Errorf("expected token next_token, got %s", resp.Msg.NextPageToken)
+			if tt.expectError && tt.errCode != 0 && connect.CodeOf(err) != tt.errCode {
+				t.Errorf("expected error code %v, got %v", tt.errCode, connect.CodeOf(err))
+			}
+			if !tt.expectError && len(resp.Msg.Group) == 0 {
+				t.Errorf("expected group to be non-empty")
 			}
 		})
 	}
 }
 
 func TestLeaderboardHandler_Subleaderboard(t *testing.T) {
+	os.Setenv("JWT_SECRET", "test_secret")
+	validToken := generateTestToken("test_secret", "user-123", "normal@example.com")
+
 	tests := []struct {
 		name        string
-		mockFunc    func(ctx context.Context, subcontestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error)
+		token       string
+		mockFunc    func(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 		expectError bool
+		errCode     connect.Code
 	}{
 		{
-			name: "success",
-			mockFunc: func(ctx context.Context, subcontestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error) {
-				return []entity.LeaderboardEntry{{}}, "next_token", nil
+			name:  "success",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+				if userID != "user-123" {
+					return nil, errors.New("unexpected userID in mock")
+				}
+				return map[string][]entity.LeaderboardEntry{"group": []entity.LeaderboardEntry{{}}}, nil
 			},
 			expectError: false,
 		},
 		{
-			name: "error",
-			mockFunc: func(ctx context.Context, subcontestSlug string, pageSize int32, pageToken string) ([]entity.LeaderboardEntry, string, error) {
-				return nil, "", errors.New("service error")
+			name:  "permission denied",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+				return nil, errors.New("permission denied: no access to subcontest")
 			},
 			expectError: true,
+			errCode:     connect.CodePermissionDenied,
+		},
+		{
+			name:  "subcontest not found",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+				return nil, errors.New("subcontest not found")
+			},
+			expectError: true,
+			errCode:     connect.CodeNotFound,
+		},
+		{
+			name:  "service error",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+				return nil, errors.New("service error")
+			},
+			expectError: true,
+			errCode:     connect.CodeUnknown,
+		},
+		{
+			name:  "unauthenticated missing token",
+			token: "",
+			mockFunc: func(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+				return nil, nil
+			},
+			expectError: true,
+			errCode:     connect.CodeUnauthenticated,
 		},
 	}
 
@@ -89,13 +141,21 @@ func TestLeaderboardHandler_Subleaderboard(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := &mockLeaderboardService{subleaderboardFunc: tt.mockFunc}
 			h := NewLeaderboardHandler(svc)
-			
-			resp, err := h.Subleaderboard(context.Background(), connect.NewRequest(&v1.SubleaderboardRequest{SubcontestSlug: "test", PageSize: 10, PageToken: "token"}))
-			if (err != nil) != tt.expectError {
-				t.Errorf("expected error %v, got %v", tt.expectError, err)
+
+			req := connect.NewRequest(&v1.SubleaderboardRequest{SubcontestSlug: "test", Limit: 10, Offset: 0})
+			if tt.token != "" {
+				req.Header().Set("Authorization", "Bearer "+tt.token)
 			}
-			if !tt.expectError && resp.Msg.NextPageToken != "next_token" {
-				t.Errorf("expected token next_token, got %s", resp.Msg.NextPageToken)
+
+			resp, err := h.Subleaderboard(context.Background(), req)
+			if (err != nil) != tt.expectError {
+				t.Fatalf("expected error %v, got %v", tt.expectError, err)
+			}
+			if tt.expectError && tt.errCode != 0 && connect.CodeOf(err) != tt.errCode {
+				t.Errorf("expected error code %v, got %v", tt.errCode, connect.CodeOf(err))
+			}
+			if !tt.expectError && len(resp.Msg.Group) == 0 {
+				t.Errorf("expected group to be non-empty")
 			}
 		})
 	}
