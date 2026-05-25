@@ -94,13 +94,21 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	parsedSubcontestID := uuid.MustParse(subcontestID)
 	leaderboard := make(map[string][]entity.LeaderboardEntry)
 
+	// All three queries join subcontest_entries → subcontests → users → contest_standings,
+	// filtering contest_standings by contest_id from subcontests to avoid cross-contest contamination.
+	fromClause := table.SubcontestEntries.
+		INNER_JOIN(table.Subcontests, table.SubcontestEntries.SubcontestID.EQ(table.Subcontests.ID)).
+		INNER_JOIN(table.Users, table.SubcontestEntries.UserID.EQ(table.Users.ID)).
+		INNER_JOIN(table.ContestStandings,
+			table.SubcontestEntries.UserID.EQ(table.ContestStandings.UserID).
+				AND(table.Subcontests.ContestID.EQ(table.ContestStandings.ContestID)),
+		)
+
 	// 1. Group Standings
 	stmt := postgres.SELECT(
 		table.Users.Username,
 		table.ContestStandings.GroupScore,
-	).FROM(
-		table.SubcontestEntries.INNER_JOIN(table.Users, table.SubcontestEntries.UserID.EQ(table.Users.ID)).INNER_JOIN(table.ContestStandings, table.SubcontestEntries.UserID.EQ(table.ContestStandings.UserID)),
-	).WHERE(
+	).FROM(fromClause).WHERE(
 		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
 		table.ContestStandings.GroupScore.DESC(),
@@ -116,9 +124,7 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	stmt = postgres.SELECT(
 		table.Users.Username,
 		table.ContestStandings.KnockoutScore,
-	).FROM(
-		table.SubcontestEntries.INNER_JOIN(table.Users, table.SubcontestEntries.UserID.EQ(table.Users.ID)).INNER_JOIN(table.ContestStandings, table.SubcontestEntries.UserID.EQ(table.ContestStandings.UserID)),
-	).WHERE(
+	).FROM(fromClause).WHERE(
 		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
 		table.ContestStandings.KnockoutScore.DESC(),
@@ -134,9 +140,7 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	stmt = postgres.SELECT(
 		table.Users.Username,
 		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).AS("contest_standings.group_score"),
-	).FROM(
-		table.SubcontestEntries.INNER_JOIN(table.Users, table.SubcontestEntries.UserID.EQ(table.Users.ID)).INNER_JOIN(table.ContestStandings, table.SubcontestEntries.UserID.EQ(table.ContestStandings.UserID)),
-	).WHERE(
+	).FROM(fromClause).WHERE(
 		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
 		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).DESC(),
