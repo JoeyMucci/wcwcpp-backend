@@ -98,25 +98,110 @@ func buildRankedGroups(standings []entity.GroupStanding) []*v1.RankedGroup {
 }
 
 func (h *PicksHandler) CreateGroupPicks(ctx context.Context, req *connect.Request[v1.CreateGroupPicksRequest]) (*connect.Response[v1.CreateGroupPicksResponse], error) {
-	err := h.svc.CreateGroupPicks(ctx, req.Msg.ContestSlug, entity.GroupPick{})
-	if err != nil {
-		return nil, err
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.CreateGroupPicksRequest]) (*connect.Response[v1.CreateGroupPicksResponse], error) {
+		userID, ok := interceptor.GetUserID(ctx)
+		if !ok {
+			return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		}
+
+		ePicks := make([]entity.GroupPick, len(req.Msg.Picks))
+		for i, pick := range req.Msg.Picks {
+			eCountries := make([]entity.GroupPickEntry, len(pick.Group.Countries))
+			for j, country := range pick.Group.Countries {
+				eCountries[j] = entity.GroupPickEntry{
+					Country: entity.Country{
+						Code:     country.Code,
+						FullName: country.FullName,
+					},
+					Place: j + 1,
+				}
+			}
+			ePicks[i] = entity.GroupPick{
+				Letter:         pick.Group.Letter,
+				Entries:        eCountries,
+				ExtraQualifier: pick.ExtraQualifier,
+			}
+		}
+
+		err := h.svc.CreateGroupPicks(ctx, userID, req.Msg.ContestSlug, ePicks)
+		if err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&v1.CreateGroupPicksResponse{}), nil
 	}
-	return connect.NewResponse(&v1.CreateGroupPicksResponse{}), nil
+
+	return interceptor.WithAuth(handlerFunc)(ctx, req)
+}
+
+func entityKnockoutPickToPB(pick entity.KnockoutPick) *v1.KnockoutPick {
+	pbEntries := make([]*v1.KnockoutEntry, 0, len(pick.Entries))
+	for _, e := range pick.Entries {
+		pbEntries = append(pbEntries, &v1.KnockoutEntry{
+			Country: &v1.Country{
+				Code:     e.Country.Code,
+				FullName: e.Country.FullName,
+			},
+			Round: int64(e.Round),
+		})
+	}
+	return &v1.KnockoutPick{
+		Entries: pbEntries,
+	}
+}
+
+func pbKnockoutPickToEntity(pick *v1.KnockoutPick) entity.KnockoutPick {
+	eEntries := make([]entity.KnockoutPickEntry, len(pick.Entries))
+	for i, e := range pick.Entries {
+		eEntries[i] = entity.KnockoutPickEntry{
+			Country: entity.Country{
+				Code:     e.Country.Code,
+				FullName: e.Country.FullName,
+			},
+			Round: int(e.Round),
+		}
+	}
+	return entity.KnockoutPick{
+		Entries: eEntries,
+	}
 }
 
 func (h *PicksHandler) ListKnockoutPicks(ctx context.Context, req *connect.Request[v1.ListKnockoutPicksRequest]) (*connect.Response[v1.ListKnockoutPicksResponse], error) {
-	_, err := h.svc.ListKnockoutPicks(ctx, req.Msg.ContestSlug)
-	if err != nil {
-		return nil, err
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.ListKnockoutPicksRequest]) (*connect.Response[v1.ListKnockoutPicksResponse], error) {
+		userID, ok := interceptor.GetUserID(ctx)
+		if !ok {
+			return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		}
+
+		pick, result, err := h.svc.ListKnockoutPicks(ctx, userID, req.Msg.ContestSlug)
+		if err != nil {
+			if err.Error() == "contest not found" {
+				return nil, connect.NewError(connect.CodeNotFound, err)
+			}
+			return nil, err
+		}
+
+		return connect.NewResponse(&v1.ListKnockoutPicksResponse{
+			Pick:   entityKnockoutPickToPB(pick),
+			Result: entityKnockoutPickToPB(result),
+		}), nil
 	}
-	return connect.NewResponse(&v1.ListKnockoutPicksResponse{}), nil
+
+	return interceptor.WithAuth(handlerFunc)(ctx, req)
 }
 
 func (h *PicksHandler) CreateKnockoutPicks(ctx context.Context, req *connect.Request[v1.CreateKnockoutPicksRequest]) (*connect.Response[v1.CreateKnockoutPicksResponse], error) {
-	err := h.svc.CreateKnockoutPicks(ctx, req.Msg.ContestSlug, entity.KnockoutPick{})
-	if err != nil {
-		return nil, err
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.CreateKnockoutPicksRequest]) (*connect.Response[v1.CreateKnockoutPicksResponse], error) {
+		userID, ok := interceptor.GetUserID(ctx)
+		if !ok {
+			return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		}
+
+		err := h.svc.CreateKnockoutPicks(ctx, userID, req.Msg.ContestSlug, pbKnockoutPickToEntity(req.Msg.Pick))
+		if err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&v1.CreateKnockoutPicksResponse{}), nil
 	}
-	return connect.NewResponse(&v1.CreateKnockoutPicksResponse{}), nil
+
+	return interceptor.WithAuth(handlerFunc)(ctx, req)
 }

@@ -22,7 +22,7 @@ message ListGroupPicksResponse {
 
 message CreateGroupPicksRequest {
     string contest_slug = 1;
-    GroupPick pick = 2;
+    repeated GroupPick picks = 2;
 }
 
 message CreateGroupPicksResponse {}
@@ -32,7 +32,8 @@ message ListKnockoutPicksRequest {
 }
 
 message ListKnockoutPicksResponse {
-    repeated KnockoutPick picks = 1;
+    KnockoutPick pick = 1;
+    KnockoutPick result = 2;
 }
 
 message CreateKnockoutPicksRequest {

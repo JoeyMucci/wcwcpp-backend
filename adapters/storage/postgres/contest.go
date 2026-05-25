@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
@@ -15,7 +16,7 @@ import (
 )
 
 type ContestRepository struct {
-	*ContestSearcher
+	*Searcher
 	db *sql.DB
 }
 
@@ -23,19 +24,19 @@ var _ ports.ContestRepository = (*ContestRepository)(nil)
 
 func NewContestRepository(db *sql.DB) *ContestRepository {
 	return &ContestRepository{
-		ContestSearcher: NewContestSearcher(db),
-		db:              db,
+		Searcher: NewSearcher(db),
+		db:       db,
 	}
 }
 
 func (r *ContestRepository) ListContests(ctx context.Context) ([]entity.Contest, error) {
 	stmt := postgres.SELECT(table.Contests.AllColumns).FROM(table.Contests)
-	
+
 	var dbContests []model.Contests
 	if err := stmt.QueryContext(ctx, r.db, &dbContests); err != nil {
 		return nil, err
 	}
-	
+
 	var contests []entity.Contest
 	for _, c := range dbContests {
 		contests = append(contests, entity.Contest{
@@ -48,7 +49,7 @@ func (r *ContestRepository) ListContests(ctx context.Context) ([]entity.Contest,
 			KnockoutLockDate:   c.KnockoutLockDate,
 		})
 	}
-	
+
 	return contests, nil
 }
 
@@ -152,15 +153,11 @@ func (r *ContestRepository) CreateGroupStandings(ctx context.Context, contestID 
 		return nil
 	}
 
-	// Fetch all countries to build a code→UUID map
-	stmt := postgres.SELECT(table.Countries.AllColumns).FROM(table.Countries)
-	var dbCountries []model.Countries
-	if err := stmt.QueryContext(ctx, r.db, &dbCountries); err != nil {
+	fmt.Println("Creating group standings for contest", contestID)
+	countryMap, err := r.GetCountryCodeToIDMap(ctx)
+	fmt.Println(countryMap)
+	if err != nil {
 		return err
-	}
-	countryMap := make(map[string]string, len(dbCountries))
-	for _, c := range dbCountries {
-		countryMap[c.Code] = c.ID.String()
 	}
 
 	insertStmt := table.GroupStandings.INSERT(
@@ -178,10 +175,9 @@ func (r *ContestRepository) CreateGroupStandings(ctx context.Context, contestID 
 		}
 	}
 
-	_, err := insertStmt.ExecContext(ctx, r.db)
+	_, err = insertStmt.ExecContext(ctx, r.db)
 	return err
 }
-
 
 func (r *ContestRepository) CreateSubcontest(ctx context.Context, subcontest *entity.Subcontest) error {
 	stmt := table.Subcontests.INSERT(
@@ -228,16 +224,16 @@ func (r *ContestRepository) ListSubcontests(ctx context.Context, contestID strin
 		table.SubcontestEntries.UserID.IS_NOT_NULL().AS("subcontest_result.is_member"),
 	).FROM(
 		table.Subcontests.
-			LEFT_JOIN(table.SubcontestEntries, 
+			LEFT_JOIN(table.SubcontestEntries,
 				table.SubcontestEntries.SubcontestID.EQ(table.Subcontests.ID).
-				AND(table.SubcontestEntries.UserID.EQ(postgres.UUID(parsedUserID))),
+					AND(table.SubcontestEntries.UserID.EQ(postgres.UUID(parsedUserID))),
 			),
 	).WHERE(
 		table.Subcontests.ContestID.EQ(postgres.UUID(parsedContestID)).
-		AND(
-			table.Subcontests.UserID.EQ(postgres.UUID(parsedUserID)).
-			OR(table.SubcontestEntries.UserID.IS_NOT_NULL()),
-		),
+			AND(
+				table.Subcontests.UserID.EQ(postgres.UUID(parsedUserID)).
+					OR(table.SubcontestEntries.UserID.IS_NOT_NULL()),
+			),
 	)
 
 	type SubcontestResult struct {
@@ -289,7 +285,6 @@ func (r *ContestRepository) GetSubcontestByJoinCode(ctx context.Context, joinCod
 		Slug:      dest.Slug,
 	}, nil
 }
-
 
 func (r *ContestRepository) DeleteSubcontest(ctx context.Context, subcontestID string) error {
 	stmt := table.Subcontests.DELETE().

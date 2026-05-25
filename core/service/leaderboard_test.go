@@ -11,11 +11,12 @@ import (
 )
 
 type mockLeaderboardRepository struct {
-	getContestBySlugFunc    func(ctx context.Context, slug string) (*entity.Contest, error)
-	getSubcontestBySlugFunc func(ctx context.Context, slug string) (*entity.Subcontest, error)
-	leaderboardFunc         func(ctx context.Context, contestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
-	subleaderboardFunc      func(ctx context.Context, subcontestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
-	hasSubcontestAccessFunc func(ctx context.Context, userID string, subcontestSlug string) (bool, error)
+	getContestBySlugFunc      func(ctx context.Context, slug string) (*entity.Contest, error)
+	getSubcontestBySlugFunc   func(ctx context.Context, slug string) (*entity.Subcontest, error)
+	leaderboardFunc           func(ctx context.Context, contestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
+	subleaderboardFunc        func(ctx context.Context, subcontestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
+	hasSubcontestAccessFunc   func(ctx context.Context, userID string, subcontestSlug string) (bool, error)
+	getCountryCodeToIDMapFunc func(ctx context.Context) (map[string]string, error)
 }
 
 func (m *mockLeaderboardRepository) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
@@ -36,6 +37,10 @@ func (m *mockLeaderboardRepository) Subleaderboard(ctx context.Context, subconte
 
 func (m *mockLeaderboardRepository) HasSubcontestAccess(ctx context.Context, userID string, subcontestSlug string) (bool, error) {
 	return m.hasSubcontestAccessFunc(ctx, userID, subcontestSlug)
+}
+
+func (m *mockLeaderboardRepository) GetCountryCodeToIDMap(ctx context.Context) (map[string]string, error) {
+	return m.getCountryCodeToIDMapFunc(ctx)
 }
 
 func TestLeaderboardService_Leaderboard(t *testing.T) {

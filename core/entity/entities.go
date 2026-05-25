@@ -48,7 +48,14 @@ type GroupPick struct {
 	ExtraQualifier bool
 }
 
-type KnockoutPick struct{}
+type KnockoutPickEntry struct {
+	Country Country
+	Round   int
+}
+
+type KnockoutPick struct {
+	Entries []KnockoutPickEntry
+}
 
 type GroupStanding struct {
 	Country        Country

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sort"
 
 	"github.com/go-jet/jet/v2/postgres"
@@ -14,7 +15,7 @@ import (
 )
 
 type PicksRepository struct {
-	*ContestSearcher
+	*Searcher
 	db *sql.DB
 }
 
@@ -22,8 +23,8 @@ var _ ports.PicksRepository = (*PicksRepository)(nil)
 
 func NewPicksRepository(db *sql.DB) *PicksRepository {
 	return &PicksRepository{
-		ContestSearcher: NewContestSearcher(db),
-		db:              db,
+		Searcher: NewSearcher(db),
+		db:       db,
 	}
 }
 
@@ -128,4 +129,46 @@ func (r *PicksRepository) ListGroupStandings(ctx context.Context, contestID stri
 		})
 	}
 	return result, nil
+}
+
+func (r *PicksRepository) CreateGroupPicks(ctx context.Context, userID string, contestID string, picks []entity.GroupPick) error {
+	parsedUserID := uuid.MustParse(userID)
+	parsedContestID := uuid.MustParse(contestID)
+
+	countryMap, err := r.GetCountryCodeToIDMap(ctx)
+	if err != nil {
+		return err
+	}
+
+	values := make([]model.GroupPicks, 0)
+	for _, pick := range picks {
+		for _, entry := range pick.Entries {
+			countryID, ok := countryMap[entry.Country.Code]
+			if !ok {
+				return fmt.Errorf("country %s not found", entry.Country.Code)
+			}
+			values = append(values, model.GroupPicks{
+				UserID:    parsedUserID,
+				ContestID: parsedContestID,
+				Letter:    pick.Letter,
+				Place:     int32(entry.Place),
+				CountryID: uuid.MustParse(countryID),
+			})
+		}
+	}
+
+	stmt := table.GroupPicks.INSERT(
+		table.GroupPicks.UserID,
+		table.GroupPicks.ContestID,
+		table.GroupPicks.Letter,
+		table.GroupPicks.Place,
+		table.GroupPicks.CountryID,
+	).VALUES(values)
+
+	_, err = stmt.ExecContext(ctx, r.db)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -40,14 +40,27 @@ func (s *PicksService) ListGroupPicks(ctx context.Context, userID string, contes
 	return picks, standings, nil
 }
 
-func (s *PicksService) CreateGroupPicks(ctx context.Context, contestSlug string, pick entity.GroupPick) error {
+func (s *PicksService) CreateGroupPicks(ctx context.Context, userID string, contestSlug string, picks []entity.GroupPick) error {
+	contest, err := s.repo.GetContestBySlug(ctx, contestSlug)
+	if err != nil {
+		return err
+	}
+	if contest == nil {
+		return errors.New("contest not found")
+	}
+
+	err = s.repo.CreateGroupPicks(ctx, userID, contest.ID, picks)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (s *PicksService) ListKnockoutPicks(ctx context.Context, contestSlug string) ([]entity.KnockoutPick, error) {
-	return nil, nil
+func (s *PicksService) ListKnockoutPicks(ctx context.Context, userID string, contestSlug string) (entity.KnockoutPick, entity.KnockoutPick, error) {
+	return entity.KnockoutPick{}, entity.KnockoutPick{}, nil
 }
 
-func (s *PicksService) CreateKnockoutPicks(ctx context.Context, contestSlug string, pick entity.KnockoutPick) error {
+func (s *PicksService) CreateKnockoutPicks(ctx context.Context, userID string, contestSlug string, pick entity.KnockoutPick) error {
 	return nil
 }

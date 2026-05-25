@@ -97,9 +97,9 @@ export class CreateGroupPicksRequest extends Message<CreateGroupPicksRequest> {
   contestSlug = "";
 
   /**
-   * @generated from field: api.v1.GroupPick pick = 2;
+   * @generated from field: repeated api.v1.GroupPick picks = 2;
    */
-  pick?: GroupPick;
+  picks: GroupPick[] = [];
 
   constructor(data?: PartialMessage<CreateGroupPicksRequest>) {
     super();
@@ -110,7 +110,7 @@ export class CreateGroupPicksRequest extends Message<CreateGroupPicksRequest> {
   static readonly typeName = "api.v1.CreateGroupPicksRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "pick", kind: "message", T: GroupPick },
+    { no: 2, name: "picks", kind: "message", T: GroupPick, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateGroupPicksRequest {
@@ -203,9 +203,14 @@ export class ListKnockoutPicksRequest extends Message<ListKnockoutPicksRequest> 
  */
 export class ListKnockoutPicksResponse extends Message<ListKnockoutPicksResponse> {
   /**
-   * @generated from field: repeated api.v1.KnockoutPick picks = 1;
+   * @generated from field: api.v1.KnockoutPick pick = 1;
    */
-  picks: KnockoutPick[] = [];
+  pick?: KnockoutPick;
+
+  /**
+   * @generated from field: api.v1.KnockoutPick result = 2;
+   */
+  result?: KnockoutPick;
 
   constructor(data?: PartialMessage<ListKnockoutPicksResponse>) {
     super();
@@ -215,7 +220,8 @@ export class ListKnockoutPicksResponse extends Message<ListKnockoutPicksResponse
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.ListKnockoutPicksResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "picks", kind: "message", T: KnockoutPick, repeated: true },
+    { no: 1, name: "pick", kind: "message", T: KnockoutPick },
+    { no: 2, name: "result", kind: "message", T: KnockoutPick },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListKnockoutPicksResponse {

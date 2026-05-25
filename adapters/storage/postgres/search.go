@@ -12,15 +12,15 @@ import (
 	"github.com/joey/wcwcpp-backend/core/entity"
 )
 
-type ContestSearcher struct {
+type Searcher struct {
 	db *sql.DB
 }
 
-func NewContestSearcher(db *sql.DB) *ContestSearcher {
-	return &ContestSearcher{db: db}
+func NewSearcher(db *sql.DB) *Searcher {
+	return &Searcher{db: db}
 }
 
-func (s *ContestSearcher) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
+func (s *Searcher) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
 	stmt := postgres.SELECT(table.Contests.AllColumns).
 		FROM(table.Contests).
 		WHERE(table.Contests.Slug.EQ(postgres.String(slug)))
@@ -42,7 +42,7 @@ func (s *ContestSearcher) GetContestBySlug(ctx context.Context, slug string) (*e
 	}, nil
 }
 
-func (s *ContestSearcher) GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error) {
+func (s *Searcher) GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error) {
 	stmt := postgres.SELECT(table.Subcontests.AllColumns).
 		FROM(table.Subcontests).
 		WHERE(table.Subcontests.Slug.EQ(postgres.String(slug)))
@@ -63,4 +63,18 @@ func (s *ContestSearcher) GetSubcontestBySlug(ctx context.Context, slug string) 
 		Title:     dest.Title,
 		Slug:      dest.Slug,
 	}, nil
+}
+
+func (s *Searcher) GetCountryCodeToIDMap(ctx context.Context) (map[string]string, error) {
+	stmt := postgres.SELECT(table.Countries.AllColumns).
+		FROM(table.Countries)
+	var dest []model.Countries
+	if err := stmt.QueryContext(ctx, s.db, &dest); err != nil {
+		return nil, err
+	}
+	countryMap := make(map[string]string, len(dest))
+	for _, c := range dest {
+		countryMap[c.Code] = c.ID.String()
+	}
+	return countryMap, nil
 }

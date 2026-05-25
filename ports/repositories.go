@@ -10,9 +10,10 @@ type TokenValidator interface {
 	ValidateGoogleToken(ctx context.Context, token string) (email string, err error)
 }
 
-type ContestSearch interface {
+type Search interface {
 	GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error)
 	GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error)
+	GetCountryCodeToIDMap(ctx context.Context) (map[string]string, error)
 }
 
 type ContestRepository interface {
@@ -26,7 +27,7 @@ type ContestRepository interface {
 	GetSubcontestByJoinCode(ctx context.Context, joinCode string) (*entity.Subcontest, error)
 	ListSubcontests(ctx context.Context, contestID string, userID string) ([]entity.Subcontest, error)
 	DeleteSubcontest(ctx context.Context, subcontestID string) error
-	ContestSearch
+	Search
 }
 
 type UserRepository interface {
@@ -40,7 +41,7 @@ type LeaderboardRepository interface {
 	Leaderboard(ctx context.Context, contestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 	Subleaderboard(ctx context.Context, subcontestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 	HasSubcontestAccess(ctx context.Context, userID string, subcontestSlug string) (bool, error)
-	ContestSearch
+	Search
 }
 
 type StandingsRepository interface {
@@ -51,5 +52,6 @@ type StandingsRepository interface {
 type PicksRepository interface {
 	ListGroupPicks(ctx context.Context, userID string, contestID string) ([]entity.GroupPick, error)
 	ListGroupStandings(ctx context.Context, contestID string) ([]entity.GroupStanding, error)
-	ContestSearch
+	CreateGroupPicks(ctx context.Context, userID string, contestID string, picks []entity.GroupPick) error
+	Search
 }
