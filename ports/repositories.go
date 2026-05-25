@@ -20,6 +20,7 @@ type ContestRepository interface {
 	CreateContest(ctx context.Context, contest *entity.Contest) error
 	CreateCountries(ctx context.Context, countries []entity.Country) error
 	CreateMatches(ctx context.Context, contestID string, matches []entity.Match) error
+	CreateGroupStandings(ctx context.Context, contestID string, groups []entity.Group) error
 	CreateSubcontest(ctx context.Context, subcontest *entity.Subcontest) error
 	JoinSubcontest(ctx context.Context, subcontestID string, userID string) error
 	GetSubcontestByJoinCode(ctx context.Context, joinCode string) (*entity.Subcontest, error)

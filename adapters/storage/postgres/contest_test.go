@@ -120,6 +120,87 @@ func TestContestRepository_CreateMatches(t *testing.T) {
 	require.NoError(t, err, "empty slice should return without error")
 }
 
+func TestContestRepository_CreateGroupStandings(t *testing.T) {
+	repo := NewContestRepository(setupTestDB(t))
+	ctx := context.Background()
+
+	// Setup contest
+	uniqueSuffix := uuid.New().String()
+	contest := &entity.Contest{
+		Title:              "GS Contest " + uniqueSuffix,
+		Slug:               "gs-contest-" + uniqueSuffix,
+		GroupUnlockDate:    time.Now(),
+		GroupLockDate:      time.Now().Add(time.Hour),
+		KnockoutUnlockDate: time.Now().Add(24 * time.Hour),
+		KnockoutLockDate:   time.Now().Add(48 * time.Hour),
+	}
+	require.NoError(t, repo.CreateContest(ctx, contest))
+
+	// Setup countries for two groups
+	c1 := uuid.New().String()[:3]
+	c2 := uuid.New().String()[:3]
+	c3 := uuid.New().String()[:3]
+	c4 := uuid.New().String()[:3]
+	c5 := uuid.New().String()[:3]
+	c6 := uuid.New().String()[:3]
+	c7 := uuid.New().String()[:3]
+	c8 := uuid.New().String()[:3]
+
+	countries := []entity.Country{
+		{Code: c1, FullName: "Country " + c1},
+		{Code: c2, FullName: "Country " + c2},
+		{Code: c3, FullName: "Country " + c3},
+		{Code: c4, FullName: "Country " + c4},
+		{Code: c5, FullName: "Country " + c5},
+		{Code: c6, FullName: "Country " + c6},
+		{Code: c7, FullName: "Country " + c7},
+		{Code: c8, FullName: "Country " + c8},
+	}
+	require.NoError(t, repo.CreateCountries(ctx, countries))
+
+	groups := []entity.Group{
+		{Letter: "A", Countries: []entity.Country{
+			{Code: c1}, {Code: c2}, {Code: c3}, {Code: c4},
+		}},
+		{Letter: "B", Countries: []entity.Country{
+			{Code: c5}, {Code: c6}, {Code: c7}, {Code: c8},
+		}},
+	}
+
+	// 1. Insert should succeed
+	err := repo.CreateGroupStandings(ctx, contest.ID, groups)
+	require.NoError(t, err)
+
+	// 2. Verify correct number of rows (4 per group × 2 groups = 8)
+	var count int
+	err = repo.db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM group_standings WHERE contest_id = $1", contest.ID,
+	).Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 8, count)
+
+	// 3. Verify letter assignment — all group A rows should have letter 'A'
+	var letterACount int
+	err = repo.db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM group_standings WHERE contest_id = $1 AND letter = 'A'", contest.ID,
+	).Scan(&letterACount)
+	require.NoError(t, err)
+	assert.Equal(t, 4, letterACount)
+
+	// 4. Verify all stats default to zero
+	var nonZeroCount int
+	err = repo.db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM group_standings WHERE contest_id = $1 AND (points != 0 OR wins != 0 OR draws != 0 OR losses != 0 OR gf != 0 OR ga != 0 OR gd != 0 OR cs != 0)",
+		contest.ID,
+	).Scan(&nonZeroCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, nonZeroCount, "all stat columns should default to zero")
+
+	// 5. Empty groups should be a no-op
+	err = repo.CreateGroupStandings(ctx, contest.ID, []entity.Group{})
+	require.NoError(t, err, "empty groups should return without error")
+}
+
 func TestContestRepository_GetContestBySlug(t *testing.T) {
 	repo := NewContestRepository(setupTestDB(t))
 	ctx := context.Background()

@@ -147,6 +147,41 @@ func (r *ContestRepository) CreateMatches(ctx context.Context, contestID string,
 	return err
 }
 
+func (r *ContestRepository) CreateGroupStandings(ctx context.Context, contestID string, groups []entity.Group) error {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	// Fetch all countries to build a code→UUID map
+	stmt := postgres.SELECT(table.Countries.AllColumns).FROM(table.Countries)
+	var dbCountries []model.Countries
+	if err := stmt.QueryContext(ctx, r.db, &dbCountries); err != nil {
+		return err
+	}
+	countryMap := make(map[string]string, len(dbCountries))
+	for _, c := range dbCountries {
+		countryMap[c.Code] = c.ID.String()
+	}
+
+	insertStmt := table.GroupStandings.INSERT(
+		table.GroupStandings.ContestID,
+		table.GroupStandings.CountryID,
+		table.GroupStandings.Letter,
+	)
+	for _, g := range groups {
+		for _, c := range g.Countries {
+			countryID, ok := countryMap[c.Code]
+			if !ok {
+				continue
+			}
+			insertStmt = insertStmt.VALUES(contestID, countryID, g.Letter)
+		}
+	}
+
+	_, err := insertStmt.ExecContext(ctx, r.db)
+	return err
+}
+
 
 func (r *ContestRepository) CreateSubcontest(ctx context.Context, subcontest *entity.Subcontest) error {
 	stmt := table.Subcontests.INSERT(

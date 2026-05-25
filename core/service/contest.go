@@ -80,6 +80,11 @@ func (s *ContestService) CreateContest(ctx context.Context, contest entity.Conte
 		return err
 	}
 
+	// 5. Seed group_standings with zero values for each country in each group
+	if err := s.repo.CreateGroupStandings(ctx, contest.ID, contest.Groups); err != nil {
+		return err
+	}
+
 	return nil
 }
 
