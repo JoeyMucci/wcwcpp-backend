@@ -30,7 +30,15 @@ func (s *LeaderboardService) Leaderboard(ctx context.Context, contestSlug string
 	return s.repo.Leaderboard(ctx, contest.ID, limit, offset)
 }
 
-func (s *LeaderboardService) Subleaderboard(ctx context.Context, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+func (s *LeaderboardService) Subleaderboard(ctx context.Context, userID string, subcontestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+	hasAccess, err := s.repo.HasSubcontestAccess(ctx, userID, subcontestSlug)
+	if err != nil {
+		return nil, err
+	}
+	if !hasAccess {
+		return nil, errors.New("permission denied: no access to subcontest")
+	}
+
 	subcontest, err := s.repo.GetSubcontestBySlug(ctx, subcontestSlug)
 	if err != nil {
 		return nil, err

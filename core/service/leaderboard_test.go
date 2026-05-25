@@ -94,6 +94,11 @@ func TestLeaderboardService_Leaderboard(t *testing.T) {
 func TestLeaderboardService_Subleaderboard(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		repo := &mockLeaderboardRepository{
+			hasSubcontestAccessFunc: func(ctx context.Context, userID string, subcontestSlug string) (bool, error) {
+				assert.Equal(t, "user-123", userID)
+				assert.Equal(t, "alice-subcontest", subcontestSlug)
+				return true, nil
+			},
 			getSubcontestBySlugFunc: func(ctx context.Context, slug string) (*entity.Subcontest, error) {
 				assert.Equal(t, "alice-subcontest", slug)
 				return &entity.Subcontest{ID: "subcontest-uuid", ContestID: "contest-uuid", Title: "Alice Subcontest", Slug: "alice-subcontest"}, nil
@@ -111,21 +116,37 @@ func TestLeaderboardService_Subleaderboard(t *testing.T) {
 		}
 
 		svc := NewLeaderboardService(repo)
-		res, err := svc.Subleaderboard(context.Background(), "alice-subcontest", 5, 2)
+		res, err := svc.Subleaderboard(context.Background(), "user-123", "alice-subcontest", 5, 2)
 		require.NoError(t, err)
 		assert.NotNil(t, res)
 		assert.Equal(t, int64(12), res["knockout"][0].Score)
 	})
 
+	t.Run("permission denied", func(t *testing.T) {
+		repo := &mockLeaderboardRepository{
+			hasSubcontestAccessFunc: func(ctx context.Context, userID string, subcontestSlug string) (bool, error) {
+				return false, nil
+			},
+		}
+
+		svc := NewLeaderboardService(repo)
+		_, err := svc.Subleaderboard(context.Background(), "user-123", "alice-subcontest", 5, 2)
+		require.Error(t, err)
+		assert.Equal(t, "permission denied: no access to subcontest", err.Error())
+	})
+
 	t.Run("subcontest not found", func(t *testing.T) {
 		repo := &mockLeaderboardRepository{
+			hasSubcontestAccessFunc: func(ctx context.Context, userID string, subcontestSlug string) (bool, error) {
+				return true, nil
+			},
 			getSubcontestBySlugFunc: func(ctx context.Context, slug string) (*entity.Subcontest, error) {
 				return nil, nil
 			},
 		}
 
 		svc := NewLeaderboardService(repo)
-		_, err := svc.Subleaderboard(context.Background(), "unknown", 10, 0)
+		_, err := svc.Subleaderboard(context.Background(), "user-123", "unknown", 10, 0)
 		require.Error(t, err)
 		assert.Equal(t, "subcontest not found", err.Error())
 	})
