@@ -203,6 +203,97 @@ export class Country extends Message<Country> {
 }
 
 /**
+ * @generated from message api.v1.RankedCountry
+ */
+export class RankedCountry extends Message<RankedCountry> {
+  /**
+   * @generated from field: string code = 1;
+   */
+  code = "";
+
+  /**
+   * @generated from field: string full_name = 2;
+   */
+  fullName = "";
+
+  /**
+   * @generated from field: int64 points = 3;
+   */
+  points = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 wins = 4;
+   */
+  wins = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 draws = 5;
+   */
+  draws = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 losses = 6;
+   */
+  losses = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 goals_for = 7;
+   */
+  goalsFor = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 goals_against = 8;
+   */
+  goalsAgainst = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 goal_difference = 9;
+   */
+  goalDifference = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 conduct_score = 10;
+   */
+  conductScore = protoInt64.zero;
+
+  constructor(data?: PartialMessage<RankedCountry>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.RankedCountry";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "full_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "points", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "wins", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 5, name: "draws", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 6, name: "losses", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 7, name: "goals_for", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 8, name: "goals_against", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 9, name: "goal_difference", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 10, name: "conduct_score", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RankedCountry {
+    return new RankedCountry().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RankedCountry {
+    return new RankedCountry().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RankedCountry {
+    return new RankedCountry().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RankedCountry | PlainMessage<RankedCountry> | undefined, b: RankedCountry | PlainMessage<RankedCountry> | undefined): boolean {
+    return proto3.util.equals(RankedCountry, a, b);
+  }
+}
+
+/**
  * @generated from message api.v1.Group
  */
 export class Group extends Message<Group> {
@@ -242,6 +333,55 @@ export class Group extends Message<Group> {
 
   static equals(a: Group | PlainMessage<Group> | undefined, b: Group | PlainMessage<Group> | undefined): boolean {
     return proto3.util.equals(Group, a, b);
+  }
+}
+
+/**
+ * @generated from message api.v1.RankedGroup
+ */
+export class RankedGroup extends Message<RankedGroup> {
+  /**
+   * @generated from field: string letter = 1;
+   */
+  letter = "";
+
+  /**
+   * @generated from field: repeated api.v1.RankedCountry ranked_countries = 2;
+   */
+  rankedCountries: RankedCountry[] = [];
+
+  /**
+   * @generated from field: optional bool extra_qualifier = 3;
+   */
+  extraQualifier?: boolean;
+
+  constructor(data?: PartialMessage<RankedGroup>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.RankedGroup";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "letter", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "ranked_countries", kind: "message", T: RankedCountry, repeated: true },
+    { no: 3, name: "extra_qualifier", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RankedGroup {
+    return new RankedGroup().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RankedGroup {
+    return new RankedGroup().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RankedGroup {
+    return new RankedGroup().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RankedGroup | PlainMessage<RankedGroup> | undefined, b: RankedGroup | PlainMessage<RankedGroup> | undefined): boolean {
+    return proto3.util.equals(RankedGroup, a, b);
   }
 }
 

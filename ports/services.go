@@ -27,7 +27,7 @@ type MatchService interface {
 }
 
 type PicksService interface {
-	ListGroupPicks(ctx context.Context, contestSlug string) ([]entity.GroupPick, error)
+	ListGroupPicks(ctx context.Context, userID string, contestSlug string) ([]entity.GroupPick, []entity.GroupStanding, error)
 	CreateGroupPicks(ctx context.Context, contestSlug string, pick entity.GroupPick) error
 	ListKnockoutPicks(ctx context.Context, contestSlug string) ([]entity.KnockoutPick, error)
 	CreateKnockoutPicks(ctx context.Context, contestSlug string, pick entity.KnockoutPick) error

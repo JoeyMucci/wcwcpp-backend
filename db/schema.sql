@@ -85,6 +85,7 @@ CREATE TABLE group_picks (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
     country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
+    letter VARCHAR(1) NOT NULL,
     place INT NOT NULL,
     PRIMARY KEY (user_id, contest_id, country_id)
 );

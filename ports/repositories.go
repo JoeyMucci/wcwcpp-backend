@@ -47,3 +47,9 @@ type StandingsRepository interface {
 	IncrementUserGroupScore(ctx context.Context, userID string, contestID string, score int)
 	IncrementUserKnockoutScore(ctx context.Context, userID string, contestID string, score int)
 }
+
+type PicksRepository interface {
+	ListGroupPicks(ctx context.Context, userID string, contestID string) ([]entity.GroupPick, error)
+	ListGroupStandings(ctx context.Context, contestID string) ([]entity.GroupStanding, error)
+	ContestSearch
+}

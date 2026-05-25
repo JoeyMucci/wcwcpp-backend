@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-import { GroupPick, KnockoutPick } from "./types_pb.js";
+import { GroupPick, KnockoutPick, RankedGroup } from "./types_pb.js";
 
 /**
  * @generated from message api.v1.ListGroupPicksRequest
@@ -53,6 +53,11 @@ export class ListGroupPicksResponse extends Message<ListGroupPicksResponse> {
    */
   picks: GroupPick[] = [];
 
+  /**
+   * @generated from field: repeated api.v1.RankedGroup ranked_groups = 2;
+   */
+  rankedGroups: RankedGroup[] = [];
+
   constructor(data?: PartialMessage<ListGroupPicksResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -62,6 +67,7 @@ export class ListGroupPicksResponse extends Message<ListGroupPicksResponse> {
   static readonly typeName = "api.v1.ListGroupPicksResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "picks", kind: "message", T: GroupPick, repeated: true },
+    { no: 2, name: "ranked_groups", kind: "message", T: RankedGroup, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListGroupPicksResponse {

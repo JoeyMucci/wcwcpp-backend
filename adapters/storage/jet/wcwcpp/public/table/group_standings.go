@@ -21,6 +21,13 @@ type groupStandingsTable struct {
 	CountryID postgres.ColumnString
 	Letter    postgres.ColumnString
 	Points    postgres.ColumnInteger
+	Wins      postgres.ColumnInteger
+	Draws     postgres.ColumnInteger
+	Losses    postgres.ColumnInteger
+	Gf        postgres.ColumnInteger
+	Ga        postgres.ColumnInteger
+	Gd        postgres.ColumnInteger
+	Cs        postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -66,9 +73,16 @@ func newGroupStandingsTableImpl(schemaName, tableName, alias string) groupStandi
 		CountryIDColumn = postgres.StringColumn("country_id")
 		LetterColumn    = postgres.StringColumn("letter")
 		PointsColumn    = postgres.IntegerColumn("points")
-		allColumns      = postgres.ColumnList{ContestIDColumn, CountryIDColumn, LetterColumn, PointsColumn}
-		mutableColumns  = postgres.ColumnList{LetterColumn, PointsColumn}
-		defaultColumns  = postgres.ColumnList{PointsColumn}
+		WinsColumn      = postgres.IntegerColumn("wins")
+		DrawsColumn     = postgres.IntegerColumn("draws")
+		LossesColumn    = postgres.IntegerColumn("losses")
+		GfColumn        = postgres.IntegerColumn("gf")
+		GaColumn        = postgres.IntegerColumn("ga")
+		GdColumn        = postgres.IntegerColumn("gd")
+		CsColumn        = postgres.IntegerColumn("cs")
+		allColumns      = postgres.ColumnList{ContestIDColumn, CountryIDColumn, LetterColumn, PointsColumn, WinsColumn, DrawsColumn, LossesColumn, GfColumn, GaColumn, GdColumn, CsColumn}
+		mutableColumns  = postgres.ColumnList{LetterColumn, PointsColumn, WinsColumn, DrawsColumn, LossesColumn, GfColumn, GaColumn, GdColumn, CsColumn}
+		defaultColumns  = postgres.ColumnList{PointsColumn, WinsColumn, DrawsColumn, LossesColumn, GfColumn, GaColumn, GdColumn, CsColumn}
 	)
 
 	return groupStandingsTable{
@@ -79,6 +93,13 @@ func newGroupStandingsTableImpl(schemaName, tableName, alias string) groupStandi
 		CountryID: CountryIDColumn,
 		Letter:    LetterColumn,
 		Points:    PointsColumn,
+		Wins:      WinsColumn,
+		Draws:     DrawsColumn,
+		Losses:    LossesColumn,
+		Gf:        GfColumn,
+		Ga:        GaColumn,
+		Gd:        GdColumn,
+		Cs:        CsColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

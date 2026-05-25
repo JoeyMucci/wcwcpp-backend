@@ -37,8 +37,32 @@ type Match struct {
 	Round             int
 	RoundIndex        *int
 }
-type GroupPick struct{}
+type GroupPickEntry struct {
+	Country Country
+	Place   int // 1–4, predicted finish position
+}
+
+type GroupPick struct {
+	Letter         string
+	Entries        []GroupPickEntry // 4 entries, sorted by Place
+	ExtraQualifier bool
+}
+
 type KnockoutPick struct{}
+
+type GroupStanding struct {
+	Country        Country
+	Letter         string
+	Points         int64
+	Wins           int64
+	Draws          int64
+	Losses         int64
+	GoalsFor       int64
+	GoalsAgainst   int64
+	GoalDifference int64
+	ConductScore   int64
+}
+
 type LeaderboardEntry struct {
 	Name  string
 	Score int64

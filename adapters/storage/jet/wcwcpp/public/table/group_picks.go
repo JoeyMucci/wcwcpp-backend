@@ -20,6 +20,7 @@ type groupPicksTable struct {
 	UserID    postgres.ColumnString
 	ContestID postgres.ColumnString
 	CountryID postgres.ColumnString
+	Letter    postgres.ColumnString
 	Place     postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
@@ -65,9 +66,10 @@ func newGroupPicksTableImpl(schemaName, tableName, alias string) groupPicksTable
 		UserIDColumn    = postgres.StringColumn("user_id")
 		ContestIDColumn = postgres.StringColumn("contest_id")
 		CountryIDColumn = postgres.StringColumn("country_id")
+		LetterColumn    = postgres.StringColumn("letter")
 		PlaceColumn     = postgres.IntegerColumn("place")
-		allColumns      = postgres.ColumnList{UserIDColumn, ContestIDColumn, CountryIDColumn, PlaceColumn}
-		mutableColumns  = postgres.ColumnList{PlaceColumn}
+		allColumns      = postgres.ColumnList{UserIDColumn, ContestIDColumn, CountryIDColumn, LetterColumn, PlaceColumn}
+		mutableColumns  = postgres.ColumnList{LetterColumn, PlaceColumn}
 		defaultColumns  = postgres.ColumnList{}
 	)
 
@@ -78,6 +80,7 @@ func newGroupPicksTableImpl(schemaName, tableName, alias string) groupPicksTable
 		UserID:    UserIDColumn,
 		ContestID: ContestIDColumn,
 		CountryID: CountryIDColumn,
+		Letter:    LetterColumn,
 		Place:     PlaceColumn,
 
 		AllColumns:     allColumns,
