@@ -15,13 +15,17 @@ import (
 )
 
 type ContestRepository struct {
+	*ContestSearcher
 	db *sql.DB
 }
 
 var _ ports.ContestRepository = (*ContestRepository)(nil)
 
 func NewContestRepository(db *sql.DB) *ContestRepository {
-	return &ContestRepository{db: db}
+	return &ContestRepository{
+		ContestSearcher: NewContestSearcher(db),
+		db:              db,
+	}
 }
 
 func (r *ContestRepository) ListContests(ctx context.Context) ([]entity.Contest, error) {
@@ -143,27 +147,6 @@ func (r *ContestRepository) CreateMatches(ctx context.Context, contestID string,
 	return err
 }
 
-func (r *ContestRepository) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
-	stmt := postgres.SELECT(table.Contests.AllColumns).
-		FROM(table.Contests).
-		WHERE(table.Contests.Slug.EQ(postgres.String(slug)))
-	var dest model.Contests
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
-		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &entity.Contest{
-		ID:                 dest.ID.String(),
-		Title:              dest.Title,
-		Slug:               dest.Slug,
-		GroupUnlockDate:    dest.GroupUnlockDate,
-		GroupLockDate:      dest.GroupLockDate,
-		KnockoutUnlockDate: dest.KnockoutUnlockDate,
-		KnockoutLockDate:   dest.KnockoutLockDate,
-	}, nil
-}
 
 func (r *ContestRepository) CreateSubcontest(ctx context.Context, subcontest *entity.Subcontest) error {
 	stmt := table.Subcontests.INSERT(
@@ -272,28 +255,6 @@ func (r *ContestRepository) GetSubcontestByJoinCode(ctx context.Context, joinCod
 	}, nil
 }
 
-func (r *ContestRepository) GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error) {
-	stmt := postgres.SELECT(table.Subcontests.AllColumns).
-		FROM(table.Subcontests).
-		WHERE(table.Subcontests.Slug.EQ(postgres.String(slug)))
-
-	var dest model.Subcontests
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
-		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return &entity.Subcontest{
-		ID:        dest.ID.String(),
-		ContestID: dest.ContestID.String(),
-		UserID:    dest.UserID.String(),
-		JoinCode:  dest.JoinCode,
-		Title:     dest.Title,
-		Slug:      dest.Slug,
-	}, nil
-}
 
 func (r *ContestRepository) DeleteSubcontest(ctx context.Context, subcontestID string) error {
 	stmt := table.Subcontests.DELETE().

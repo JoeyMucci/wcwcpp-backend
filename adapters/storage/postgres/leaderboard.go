@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
+	"github.com/google/uuid"
 	"github.com/joey/wcwcpp-backend/core/entity"
 	"github.com/joey/wcwcpp-backend/ports"
 
@@ -15,119 +16,144 @@ import (
 )
 
 type LeaderboardRepository struct {
+	*ContestSearcher
 	db *sql.DB
 }
 
 var _ ports.LeaderboardRepository = (*LeaderboardRepository)(nil)
 
 func NewLeaderboardRepository(db *sql.DB) *LeaderboardRepository {
-	return &LeaderboardRepository{db: db}
+	return &LeaderboardRepository{
+		ContestSearcher: NewContestSearcher(db),
+		db:              db,
+	}
 }
 
 func (r *LeaderboardRepository) Leaderboard(ctx context.Context, contestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+	parsedContestID := uuid.MustParse(contestID)
 	leaderboard := make(map[string][]entity.LeaderboardEntry)
 
+	// 1. Group Standings
 	stmt := postgres.SELECT(
-		table.Users.Username.AS("Name"),
-		table.ContestStandings.GroupScore.AS("Score"),
+		table.Users.Username,
+		table.ContestStandings.GroupScore,
 	).FROM(
 		table.ContestStandings.INNER_JOIN(table.Users, table.ContestStandings.UserID.EQ(table.Users.ID)),
 	).WHERE(
-		table.ContestStandings.ContestID.EQ(postgres.String(contestID)),
+		table.ContestStandings.ContestID.EQ(postgres.UUID(parsedContestID)),
 	).ORDER_BY(
 		table.ContestStandings.GroupScore.DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
-	var dest []entity.LeaderboardEntry
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+
+	var groupDest []dbLeaderboardRow
+	if err := stmt.QueryContext(ctx, r.db, &groupDest); err != nil {
 		return nil, err
 	}
-	leaderboard["group"] = dest
+	leaderboard["group"] = mapGroupDBRowsToEntity(groupDest)
+
+	// 2. Knockout Standings
 	stmt = postgres.SELECT(
-		table.Users.Username.AS("Name"),
-		table.ContestStandings.KnockoutScore.AS("Score"),
+		table.Users.Username,
+		table.ContestStandings.KnockoutScore,
 	).FROM(
 		table.ContestStandings.INNER_JOIN(table.Users, table.ContestStandings.UserID.EQ(table.Users.ID)),
 	).WHERE(
-		table.ContestStandings.ContestID.EQ(postgres.String(contestID)),
+		table.ContestStandings.ContestID.EQ(postgres.UUID(parsedContestID)),
 	).ORDER_BY(
 		table.ContestStandings.KnockoutScore.DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+
+	var knockoutDest []dbLeaderboardRow
+	if err := stmt.QueryContext(ctx, r.db, &knockoutDest); err != nil {
 		return nil, err
 	}
-	leaderboard["knockout"] = dest
+	leaderboard["knockout"] = mapKnockoutDBRowsToEntity(knockoutDest)
+
+	// 3. Overall Standings
 	stmt = postgres.SELECT(
-		table.Users.Username.AS("Name"),
-		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).AS("Score"),
+		table.Users.Username,
+		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).AS("contest_standings.group_score"),
 	).FROM(
 		table.ContestStandings.INNER_JOIN(table.Users, table.ContestStandings.UserID.EQ(table.Users.ID)),
 	).WHERE(
-		table.ContestStandings.ContestID.EQ(postgres.String(contestID)),
+		table.ContestStandings.ContestID.EQ(postgres.UUID(parsedContestID)),
 	).ORDER_BY(
 		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+
+	var overallDest []dbLeaderboardRow
+	if err := stmt.QueryContext(ctx, r.db, &overallDest); err != nil {
 		return nil, err
 	}
-	leaderboard["overall"] = dest
+	leaderboard["overall"] = mapGroupDBRowsToEntity(overallDest)
 
 	return leaderboard, nil
 }
 
 func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
+	parsedSubcontestID := uuid.MustParse(subcontestID)
 	leaderboard := make(map[string][]entity.LeaderboardEntry)
 
+	// 1. Group Standings
 	stmt := postgres.SELECT(
-		table.Users.Username.AS("Name"),
-		table.ContestStandings.GroupScore.AS("Score"),
+		table.Users.Username,
+		table.ContestStandings.GroupScore,
 	).FROM(
 		table.SubcontestEntries.INNER_JOIN(table.Users, table.SubcontestEntries.UserID.EQ(table.Users.ID)).INNER_JOIN(table.ContestStandings, table.SubcontestEntries.UserID.EQ(table.ContestStandings.UserID)),
 	).WHERE(
-		table.SubcontestEntries.SubcontestID.EQ(postgres.String(subcontestID)),
+		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
 		table.ContestStandings.GroupScore.DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
 
-	var dest []entity.LeaderboardEntry
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+	var groupDest []dbLeaderboardRow
+	if err := stmt.QueryContext(ctx, r.db, &groupDest); err != nil {
 		return nil, err
 	}
-	leaderboard["group"] = dest
+	leaderboard["group"] = mapGroupDBRowsToEntity(groupDest)
 
+	// 2. Knockout Standings
 	stmt = postgres.SELECT(
-		table.Users.Username.AS("Name"),
-		table.ContestStandings.KnockoutScore.AS("Score"),
+		table.Users.Username,
+		table.ContestStandings.KnockoutScore,
 	).FROM(
 		table.SubcontestEntries.INNER_JOIN(table.Users, table.SubcontestEntries.UserID.EQ(table.Users.ID)).INNER_JOIN(table.ContestStandings, table.SubcontestEntries.UserID.EQ(table.ContestStandings.UserID)),
 	).WHERE(
-		table.SubcontestEntries.SubcontestID.EQ(postgres.String(subcontestID)),
+		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
 		table.ContestStandings.KnockoutScore.DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+
+	var knockoutDest []dbLeaderboardRow
+	if err := stmt.QueryContext(ctx, r.db, &knockoutDest); err != nil {
 		return nil, err
 	}
-	leaderboard["knockout"] = dest
+	leaderboard["knockout"] = mapKnockoutDBRowsToEntity(knockoutDest)
 
+	// 3. Overall Standings
 	stmt = postgres.SELECT(
-		table.Users.Username.AS("Name"),
-		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).AS("Score"),
+		table.Users.Username,
+		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).AS("contest_standings.group_score"),
 	).FROM(
 		table.SubcontestEntries.INNER_JOIN(table.Users, table.SubcontestEntries.UserID.EQ(table.Users.ID)).INNER_JOIN(table.ContestStandings, table.SubcontestEntries.UserID.EQ(table.ContestStandings.UserID)),
 	).WHERE(
-		table.SubcontestEntries.SubcontestID.EQ(postgres.String(subcontestID)),
+		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
 		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
+
+	var overallDest []dbLeaderboardRow
+	if err := stmt.QueryContext(ctx, r.db, &overallDest); err != nil {
 		return nil, err
 	}
-	leaderboard["overall"] = dest
+	leaderboard["overall"] = mapGroupDBRowsToEntity(overallDest)
 
 	return leaderboard, nil
 }
 
+
 func (r *LeaderboardRepository) HasSubcontestAccess(ctx context.Context, userID string, subcontestSlug string) (bool, error) {
+	parsedUserID := uuid.MustParse(userID)
 	stmt := postgres.SELECT(table.Subcontests.AllColumns).
 		FROM(table.Subcontests).
 		WHERE(table.Subcontests.Slug.EQ(postgres.String(subcontestSlug)))
@@ -144,7 +170,7 @@ func (r *LeaderboardRepository) HasSubcontestAccess(ctx context.Context, userID 
 	stmt = postgres.SELECT(table.SubcontestEntries.AllColumns).
 		FROM(table.SubcontestEntries).
 		WHERE(postgres.AND(table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(dest.ID)),
-			table.SubcontestEntries.UserID.EQ(postgres.String(userID))))
+			table.SubcontestEntries.UserID.EQ(postgres.UUID(parsedUserID))))
 	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
 		// no rows in entries -> not a member
 		if errors.Is(err, qrm.ErrNoRows) {
@@ -155,47 +181,30 @@ func (r *LeaderboardRepository) HasSubcontestAccess(ctx context.Context, userID 
 	return true, nil
 }
 
-func (r *LeaderboardRepository) GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error) {
-	stmt := postgres.SELECT(table.Contests.AllColumns).
-		FROM(table.Contests).
-		WHERE(table.Contests.Slug.EQ(postgres.String(slug)))
-	var dest model.Contests
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
-		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &entity.Contest{
-		ID:                 dest.ID.String(),
-		Title:              dest.Title,
-		Slug:               dest.Slug,
-		GroupUnlockDate:    dest.GroupUnlockDate,
-		GroupLockDate:      dest.GroupLockDate,
-		KnockoutUnlockDate: dest.KnockoutUnlockDate,
-		KnockoutLockDate:   dest.KnockoutLockDate,
-	}, nil
+type dbLeaderboardRow struct {
+	model.Users
+	model.ContestStandings
 }
 
-func (r *LeaderboardRepository) GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error) {
-	stmt := postgres.SELECT(table.Subcontests.AllColumns).
-		FROM(table.Subcontests).
-		WHERE(table.Subcontests.Slug.EQ(postgres.String(slug)))
-
-	var dest model.Subcontests
-	if err := stmt.QueryContext(ctx, r.db, &dest); err != nil {
-		if errors.Is(err, qrm.ErrNoRows) {
-			return nil, nil
+func mapGroupDBRowsToEntity(rows []dbLeaderboardRow) []entity.LeaderboardEntry {
+	entries := make([]entity.LeaderboardEntry, len(rows))
+	for i, r := range rows {
+		entries[i] = entity.LeaderboardEntry{
+			Name:  r.Username,
+			Score: int64(r.GroupScore),
 		}
-		return nil, err
 	}
-
-	return &entity.Subcontest{
-		ID:        dest.ID.String(),
-		ContestID: dest.ContestID.String(),
-		UserID:    dest.UserID.String(),
-		JoinCode:  dest.JoinCode,
-		Title:     dest.Title,
-		Slug:      dest.Slug,
-	}, nil
+	return entries
 }
+
+func mapKnockoutDBRowsToEntity(rows []dbLeaderboardRow) []entity.LeaderboardEntry {
+	entries := make([]entity.LeaderboardEntry, len(rows))
+	for i, r := range rows {
+		entries[i] = entity.LeaderboardEntry{
+			Name:  r.Username,
+			Score: int64(r.KnockoutScore),
+		}
+	}
+	return entries
+}
+
