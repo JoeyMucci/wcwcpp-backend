@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/joey/wcwcpp-backend/adapters/auth"
 	"github.com/joey/wcwcpp-backend/adapters/handler"
 	"github.com/joey/wcwcpp-backend/adapters/storage/postgres"
@@ -12,7 +13,34 @@ import (
 	"github.com/joey/wcwcpp-backend/pkg/api/v1/v1connect"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
+
+type customJSONCodec struct {
+	marshalOpts   protojson.MarshalOptions
+	unmarshalOpts protojson.UnmarshalOptions
+}
+
+func (c *customJSONCodec) Name() string {
+	return "json"
+}
+
+func (c *customJSONCodec) Marshal(message any) ([]byte, error) {
+	protoMessage, ok := message.(proto.Message)
+	if !ok {
+		return nil, fmt.Errorf("message is not a proto.Message")
+	}
+	return c.marshalOpts.Marshal(protoMessage)
+}
+
+func (c *customJSONCodec) Unmarshal(data []byte, message any) error {
+	protoMessage, ok := message.(proto.Message)
+	if !ok {
+		return fmt.Errorf("message is not a proto.Message")
+	}
+	return c.unmarshalOpts.Unmarshal(data, protoMessage)
+}
 
 func main() {
 	// 1. Initialize Database
@@ -39,20 +67,37 @@ func main() {
 	leaderboardService := service.NewLeaderboardService(leaderboardRepo)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
 
+	picksRepo := postgres.NewPicksRepository(db)
+	picksService := service.NewPicksService(picksRepo)
+	picksHandler := handler.NewPicksHandler(picksService)
+
+	// Custom JSON codec to emit unpopulated fields (e.g. including points: 0, wins: 0 in response)
+	jsonCodec := &customJSONCodec{
+		marshalOpts: protojson.MarshalOptions{
+			EmitUnpopulated: true,
+		},
+		unmarshalOpts: protojson.UnmarshalOptions{
+			DiscardUnknown: true,
+		},
+	}
+
 	mux := http.NewServeMux()
 
-	// 5. Register RPC Handlers to the mux
-	authPath, authSvcHandler := v1connect.NewAuthServiceHandler(authHandler)
+	// 5. Register RPC Handlers to the mux with custom JSON codec
+	authPath, authSvcHandler := v1connect.NewAuthServiceHandler(authHandler, connect.WithCodec(jsonCodec))
 	mux.Handle(authPath, authSvcHandler)
 
-	contestPath, contestSvcHandler := v1connect.NewContestServiceHandler(contestHandler)
+	contestPath, contestSvcHandler := v1connect.NewContestServiceHandler(contestHandler, connect.WithCodec(jsonCodec))
 	mux.Handle(contestPath, contestSvcHandler)
 
-	usersPath, usersSvcHandler := v1connect.NewUsersServiceHandler(usersHandler)
+	usersPath, usersSvcHandler := v1connect.NewUsersServiceHandler(usersHandler, connect.WithCodec(jsonCodec))
 	mux.Handle(usersPath, usersSvcHandler)
 
-	leaderboardPath, leaderboardSvcHandler := v1connect.NewLeaderboardServiceHandler(leaderboardHandler)
+	leaderboardPath, leaderboardSvcHandler := v1connect.NewLeaderboardServiceHandler(leaderboardHandler, connect.WithCodec(jsonCodec))
 	mux.Handle(leaderboardPath, leaderboardSvcHandler)
+
+	picksPath, picksSvcHandler := v1connect.NewPicksServiceHandler(picksHandler, connect.WithCodec(jsonCodec))
+	mux.Handle(picksPath, picksSvcHandler)
 
 	fmt.Println("Starting server on :8080")
 	// Use h2c for unencrypted HTTP/2 (required for Connect without TLS)

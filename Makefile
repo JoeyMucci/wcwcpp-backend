@@ -42,7 +42,7 @@ run:
 
 # Generate a dev token with env vars loaded. Usage: make token [EMAIL=user@example.com]
 token:
-	go run cmd/dev-token/main.go $(EMAIL)
+	@go run cmd/dev-token/main.go $(EMAIL)
 
 # Seed the database
 seed:

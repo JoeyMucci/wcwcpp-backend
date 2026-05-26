@@ -54,9 +54,9 @@ export class ListGroupPicksResponse extends Message<ListGroupPicksResponse> {
   picks: GroupPick[] = [];
 
   /**
-   * @generated from field: repeated api.v1.RankedGroup ranked_groups = 2;
+   * @generated from field: repeated api.v1.RankedGroup results = 2;
    */
-  rankedGroups: RankedGroup[] = [];
+  results: RankedGroup[] = [];
 
   constructor(data?: PartialMessage<ListGroupPicksResponse>) {
     super();
@@ -67,7 +67,7 @@ export class ListGroupPicksResponse extends Message<ListGroupPicksResponse> {
   static readonly typeName = "api.v1.ListGroupPicksResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "picks", kind: "message", T: GroupPick, repeated: true },
-    { no: 2, name: "ranked_groups", kind: "message", T: RankedGroup, repeated: true },
+    { no: 2, name: "results", kind: "message", T: RankedGroup, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListGroupPicksResponse {

@@ -57,8 +57,8 @@ func (h *PicksHandler) ListGroupPicks(ctx context.Context, req *connect.Request[
 		pbRankedGroups := buildRankedGroups(standings)
 
 		return connect.NewResponse(&v1.ListGroupPicksResponse{
-			Picks:        pbPicks,
-			RankedGroups: pbRankedGroups,
+			Picks:   pbPicks,
+			Results: pbRankedGroups,
 		}), nil
 	}
 
@@ -125,6 +125,12 @@ func (h *PicksHandler) CreateGroupPicks(ctx context.Context, req *connect.Reques
 
 		err := h.svc.CreateGroupPicks(ctx, userID, req.Msg.ContestSlug, ePicks)
 		if err != nil {
+			if err.Error() == "contest not found" {
+				return nil, connect.NewError(connect.CodeNotFound, err)
+			}
+			if err.Error() == "group stage picks are locked" {
+				return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+			}
 			return nil, err
 		}
 		return connect.NewResponse(&v1.CreateGroupPicksResponse{}), nil
@@ -198,6 +204,12 @@ func (h *PicksHandler) CreateKnockoutPicks(ctx context.Context, req *connect.Req
 
 		err := h.svc.CreateKnockoutPicks(ctx, userID, req.Msg.ContestSlug, pbKnockoutPickToEntity(req.Msg.Pick))
 		if err != nil {
+			if err.Error() == "contest not found" {
+				return nil, connect.NewError(connect.CodeNotFound, err)
+			}
+			if err.Error() == "knockout stage picks are locked" {
+				return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+			}
 			return nil, err
 		}
 		return connect.NewResponse(&v1.CreateKnockoutPicksResponse{}), nil

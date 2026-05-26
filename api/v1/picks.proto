@@ -15,7 +15,7 @@ message ListGroupPicksResponse {
     repeated GroupPick picks = 1 [(buf.validate.field).repeated = {
         max_items: 12
     }];
-    repeated RankedGroup ranked_groups = 2 [(buf.validate.field).repeated = {
+    repeated RankedGroup results = 2 [(buf.validate.field).repeated = {
         max_items: 12
     }];
 }

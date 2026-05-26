@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/joey/wcwcpp-backend/core/entity"
 	"github.com/joey/wcwcpp-backend/ports"
@@ -180,6 +181,42 @@ func TestPicksService_CreateGroupPicks(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, "contest not found", err.Error())
 	})
+
+	t.Run("should return error if group stage picks are locked (before unlock)", func(t *testing.T) {
+		importTime := time.Now()
+		repo := &mockPicksRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{
+					ID:              "contest-1",
+					GroupUnlockDate: importTime.Add(24 * time.Hour),
+					GroupLockDate:   importTime.Add(48 * time.Hour),
+				}, nil
+			},
+		}
+
+		svc := NewPicksService(repo)
+		err := svc.CreateGroupPicks(context.Background(), "user-1", "world-cup-2026", []entity.GroupPick{{Letter: "A"}})
+		require.Error(t, err)
+		require.Equal(t, "group stage picks are locked", err.Error())
+	})
+
+	t.Run("should return error if group stage picks are locked (after lock)", func(t *testing.T) {
+		importTime := time.Now()
+		repo := &mockPicksRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{
+					ID:              "contest-1",
+					GroupUnlockDate: importTime.Add(-48 * time.Hour),
+					GroupLockDate:   importTime.Add(-24 * time.Hour),
+				}, nil
+			},
+		}
+
+		svc := NewPicksService(repo)
+		err := svc.CreateGroupPicks(context.Background(), "user-1", "world-cup-2026", []entity.GroupPick{{Letter: "A"}})
+		require.Error(t, err)
+		require.Equal(t, "group stage picks are locked", err.Error())
+	})
 }
 
 func TestPicksService_ListKnockoutPicks(t *testing.T) {
@@ -229,5 +266,43 @@ func TestPicksService_CreateKnockoutPicks(t *testing.T) {
 		svc := NewPicksService(repo)
 		err := svc.CreateKnockoutPicks(context.Background(), "user-1", "world-cup-2026", samplePick)
 		require.NoError(t, err)
+	})
+
+	t.Run("should return error if knockout stage picks are locked (before unlock)", func(t *testing.T) {
+		importTime := time.Now()
+		samplePick := entity.KnockoutPick{Entries: []entity.KnockoutPickEntry{{Round: 16}}}
+		repo := &mockPicksRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{
+					ID:                 "contest-1",
+					KnockoutUnlockDate: importTime.Add(24 * time.Hour),
+					KnockoutLockDate:   importTime.Add(48 * time.Hour),
+				}, nil
+			},
+		}
+
+		svc := NewPicksService(repo)
+		err := svc.CreateKnockoutPicks(context.Background(), "user-1", "world-cup-2026", samplePick)
+		require.Error(t, err)
+		require.Equal(t, "knockout stage picks are locked", err.Error())
+	})
+
+	t.Run("should return error if knockout stage picks are locked (after lock)", func(t *testing.T) {
+		importTime := time.Now()
+		samplePick := entity.KnockoutPick{Entries: []entity.KnockoutPickEntry{{Round: 16}}}
+		repo := &mockPicksRepository{
+			getContestBySlugFunc: func(ctx context.Context, slug string) (*entity.Contest, error) {
+				return &entity.Contest{
+					ID:                 "contest-1",
+					KnockoutUnlockDate: importTime.Add(-48 * time.Hour),
+					KnockoutLockDate:   importTime.Add(-24 * time.Hour),
+				}, nil
+			},
+		}
+
+		svc := NewPicksService(repo)
+		err := svc.CreateKnockoutPicks(context.Background(), "user-1", "world-cup-2026", samplePick)
+		require.Error(t, err)
+		require.Equal(t, "knockout stage picks are locked", err.Error())
 	})
 }

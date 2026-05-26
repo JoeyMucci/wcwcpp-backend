@@ -85,8 +85,8 @@ func TestPicksHandler_ListGroupPicks(t *testing.T) {
 				assert.Equal(t, "USA", pick.Group.Countries[0].Code)
 				assert.True(t, pick.ExtraQualifier)
 
-				require.Len(t, resp.Msg.RankedGroups, 1)
-				rg := resp.Msg.RankedGroups[0]
+				require.Len(t, resp.Msg.Results, 1)
+				rg := resp.Msg.Results[0]
 				assert.Equal(t, "A", rg.Letter)
 				require.Len(t, rg.RankedCountries, 4)
 				assert.Equal(t, "USA", rg.RankedCountries[0].Code)
@@ -204,16 +204,28 @@ func TestPicksHandler_CreateGroupPicks(t *testing.T) {
 			errCode:     connect.CodeUnauthenticated,
 		},
 		{
-			name:  "service error",
+			name:  "contest not found",
+			token: validToken,
+			reqPayload: &v1.CreateGroupPicksRequest{
+				ContestSlug: "nonexistent",
+			},
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, picks []entity.GroupPick) error {
+				return errors.New("contest not found")
+			},
+			expectError: true,
+			errCode:     connect.CodeNotFound,
+		},
+		{
+			name:  "picks locked",
 			token: validToken,
 			reqPayload: &v1.CreateGroupPicksRequest{
 				ContestSlug: "world-cup-2026",
 			},
 			mockFunc: func(ctx context.Context, userID string, contestSlug string, picks []entity.GroupPick) error {
-				return errors.New("failed to save")
+				return errors.New("group stage picks are locked")
 			},
 			expectError: true,
-			errCode:     connect.CodeUnknown,
+			errCode:     connect.CodeFailedPrecondition,
 		},
 	}
 
@@ -374,13 +386,28 @@ func TestPicksHandler_CreateKnockoutPicks(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:  "unauthenticated",
-			token: "",
+			name:  "contest not found",
+			token: validToken,
+			reqPayload: &v1.CreateKnockoutPicksRequest{
+				ContestSlug: "nonexistent",
+			},
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, pick entity.KnockoutPick) error {
+				return errors.New("contest not found")
+			},
+			expectError: true,
+			errCode:     connect.CodeNotFound,
+		},
+		{
+			name:  "picks locked",
+			token: validToken,
 			reqPayload: &v1.CreateKnockoutPicksRequest{
 				ContestSlug: "world-cup-2026",
 			},
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, pick entity.KnockoutPick) error {
+				return errors.New("knockout stage picks are locked")
+			},
 			expectError: true,
-			errCode:     connect.CodeUnauthenticated,
+			errCode:     connect.CodeFailedPrecondition,
 		},
 	}
 

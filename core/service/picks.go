@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/joey/wcwcpp-backend/core/entity"
 	"github.com/joey/wcwcpp-backend/ports"
@@ -49,6 +50,15 @@ func (s *PicksService) CreateGroupPicks(ctx context.Context, userID string, cont
 		return errors.New("contest not found")
 	}
 
+	// Lock checks
+	now := time.Now()
+	if !contest.GroupUnlockDate.IsZero() && now.Before(contest.GroupUnlockDate) {
+		return errors.New("group stage picks are locked")
+	}
+	if !contest.GroupLockDate.IsZero() && now.After(contest.GroupLockDate) {
+		return errors.New("group stage picks are locked")
+	}
+
 	err = s.repo.CreateGroupPicks(ctx, userID, contest.ID, picks)
 	if err != nil {
 		return err
@@ -86,6 +96,15 @@ func (s *PicksService) CreateKnockoutPicks(ctx context.Context, userID string, c
 	}
 	if contest == nil {
 		return errors.New("contest not found")
+	}
+
+	// Lock checks
+	now := time.Now()
+	if !contest.KnockoutUnlockDate.IsZero() && now.Before(contest.KnockoutUnlockDate) {
+		return errors.New("knockout stage picks are locked")
+	}
+	if !contest.KnockoutLockDate.IsZero() && now.After(contest.KnockoutLockDate) {
+		return errors.New("knockout stage picks are locked")
 	}
 
 	return s.repo.CreateKnockoutPicks(ctx, userID, contest.ID, pick)
