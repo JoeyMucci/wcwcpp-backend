@@ -47,3 +47,7 @@ token:
 # Seed the database
 seed:
 	go run cmd/seed/main.go
+
+# Run complete UAT walkthrough
+uat:
+	go run cmd/uat/main.go

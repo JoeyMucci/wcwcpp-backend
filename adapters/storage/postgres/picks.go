@@ -144,6 +144,33 @@ func (r *PicksRepository) CreateGroupPicks(ctx context.Context, userID string, c
 		return err
 	}
 
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Extract unique letters being submitted to delete existing picks for those specific groups
+	var letters []postgres.Expression
+	letterMap := make(map[string]bool)
+	for _, p := range picks {
+		if !letterMap[p.Letter] {
+			letterMap[p.Letter] = true
+			letters = append(letters, postgres.String(p.Letter))
+		}
+	}
+
+	if len(letters) > 0 {
+		delStmt := table.GroupPicks.DELETE().WHERE(
+			table.GroupPicks.UserID.EQ(postgres.UUID(parsedUserID)).
+				AND(table.GroupPicks.ContestID.EQ(postgres.UUID(parsedContestID))).
+				AND(table.GroupPicks.Letter.IN(letters...)),
+		)
+		if _, err := delStmt.ExecContext(ctx, tx); err != nil {
+			return err
+		}
+	}
+
 	stmt := table.GroupPicks.INSERT(
 		table.GroupPicks.UserID,
 		table.GroupPicks.ContestID,
@@ -177,12 +204,12 @@ func (r *PicksRepository) CreateGroupPicks(ctx context.Context, userID string, c
 		return nil
 	}
 
-	_, err = stmt.ExecContext(ctx, r.db)
+	_, err = stmt.ExecContext(ctx, tx)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 type dbKnockoutPickRow struct {
@@ -317,6 +344,20 @@ func (r *PicksRepository) CreateKnockoutPicks(ctx context.Context, userID string
 		return err
 	}
 
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	delStmt := table.KnockoutPicks.DELETE().WHERE(
+		table.KnockoutPicks.UserID.EQ(postgres.UUID(parsedUserID)).
+			AND(table.KnockoutPicks.ContestID.EQ(postgres.UUID(parsedContestID))),
+	)
+	if _, err := delStmt.ExecContext(ctx, tx); err != nil {
+		return err
+	}
+
 	stmt := table.KnockoutPicks.INSERT(
 		table.KnockoutPicks.UserID,
 		table.KnockoutPicks.ContestID,
@@ -344,10 +385,10 @@ func (r *PicksRepository) CreateKnockoutPicks(ctx context.Context, userID string
 		return nil
 	}
 
-	_, err = stmt.ExecContext(ctx, r.db)
+	_, err = stmt.ExecContext(ctx, tx)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return tx.Commit()
 }

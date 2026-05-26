@@ -894,12 +894,22 @@ func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, m
 						return fmt.Errorf("failed to query knockout picks: %w", err)
 					}
 					for _, u := range pickedUsers {
-						updStandingsStmt := table.ContestStandings.UPDATE(table.ContestStandings.KnockoutScore).
-							SET(table.ContestStandings.KnockoutScore.ADD(postgres.Int32(points))).
-							WHERE(
-								table.ContestStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
-									AND(table.ContestStandings.UserID.EQ(postgres.UUID(u.UserID))),
-							)
+						updStandingsStmt := table.ContestStandings.INSERT(
+							table.ContestStandings.ContestID,
+							table.ContestStandings.UserID,
+							table.ContestStandings.KnockoutScore,
+						).VALUES(
+							postgres.UUID(existingMatch.ContestID),
+							u.UserID,
+							points,
+						).ON_CONFLICT(
+							table.ContestStandings.ContestID,
+							table.ContestStandings.UserID,
+						).DO_UPDATE(
+							postgres.SET(
+								table.ContestStandings.KnockoutScore.SET(table.ContestStandings.KnockoutScore.ADD(postgres.Int32(points))),
+							),
+						)
 						if _, err := updStandingsStmt.ExecContext(ctx, tx); err != nil {
 							return fmt.Errorf("failed to update contest standings for user %s: %w", u.UserID.String(), err)
 						}
@@ -1069,12 +1079,22 @@ func (r *ContestRepository) FinalizeGroupRankings(ctx context.Context, contestID
 	}
 
 	for uID, pts := range userPoints {
-		updStandings := table.ContestStandings.UPDATE(table.ContestStandings.GroupScore).
-			SET(table.ContestStandings.GroupScore.ADD(postgres.Int32(pts))).
-			WHERE(
-				table.ContestStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
-					AND(table.ContestStandings.UserID.EQ(postgres.UUID(uID))),
-			)
+		updStandings := table.ContestStandings.INSERT(
+			table.ContestStandings.ContestID,
+			table.ContestStandings.UserID,
+			table.ContestStandings.GroupScore,
+		).VALUES(
+			parsedContestID,
+			uID,
+			pts,
+		).ON_CONFLICT(
+			table.ContestStandings.ContestID,
+			table.ContestStandings.UserID,
+		).DO_UPDATE(
+			postgres.SET(
+				table.ContestStandings.GroupScore.SET(table.ContestStandings.GroupScore.ADD(postgres.Int32(pts))),
+			),
+		)
 		if _, err := updStandings.ExecContext(ctx, tx); err != nil {
 			return fmt.Errorf("failed to increment user group score: %w", err)
 		}
@@ -1156,12 +1176,22 @@ func (r *ContestRepository) FinalizeThirdPlaceQualifier(ctx context.Context, con
 	// 5. Award 5 points if they correctly predicted the boolean advancement.
 	for _, p := range picks {
 		if p.ExtraQualifier == isWildcardQualifier {
-			updStandings := table.ContestStandings.UPDATE(table.ContestStandings.GroupScore).
-				SET(table.ContestStandings.GroupScore.ADD(postgres.Int32(5))).
-				WHERE(
-					table.ContestStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
-						AND(table.ContestStandings.UserID.EQ(postgres.UUID(p.UserID))),
-				)
+			updStandings := table.ContestStandings.INSERT(
+				table.ContestStandings.ContestID,
+				table.ContestStandings.UserID,
+				table.ContestStandings.GroupScore,
+			).VALUES(
+				parsedContestID,
+				p.UserID,
+				int32(5),
+			).ON_CONFLICT(
+				table.ContestStandings.ContestID,
+				table.ContestStandings.UserID,
+			).DO_UPDATE(
+				postgres.SET(
+					table.ContestStandings.GroupScore.SET(table.ContestStandings.GroupScore.ADD(postgres.Int32(5))),
+				),
+			)
 			if _, err := updStandings.ExecContext(ctx, tx); err != nil {
 				return fmt.Errorf("failed to award bonus points: %w", err)
 			}
