@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
+	"github.com/joey/wcwcpp-backend/adapters/interceptor"
 	"github.com/joey/wcwcpp-backend/core/entity"
 	"github.com/joey/wcwcpp-backend/pkg/api/v1"
 	"github.com/joey/wcwcpp-backend/pkg/api/v1/v1connect"
@@ -21,33 +22,45 @@ func NewMatchHandler(svc ports.MatchService) *MatchHandler {
 }
 
 func (h *MatchHandler) ListGroupMatches(ctx context.Context, req *connect.Request[v1.ListGroupMatchesRequest]) (*connect.Response[v1.ListGroupMatchesResponse], error) {
-	matches, err := h.svc.ListGroupMatches(ctx, req.Msg.ContestSlug, req.Msg.Letter)
-	if err != nil {
-		return nil, err
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.ListGroupMatchesRequest]) (*connect.Response[v1.ListGroupMatchesResponse], error) {
+		matches, err := h.svc.ListGroupMatches(ctx, req.Msg.ContestSlug, req.Msg.Letter)
+		if err != nil {
+			return nil, err
+		}
+
+		return connect.NewResponse(&v1.ListGroupMatchesResponse{
+			Matches: mapMatchesToProto(matches),
+		}), nil
 	}
 
-	return connect.NewResponse(&v1.ListGroupMatchesResponse{
-		Matches: mapMatchesToProto(matches),
-	}), nil
+	return interceptor.WithPublic(handlerFunc)(ctx, req)
 }
 
 func (h *MatchHandler) ListKnockoutMatches(ctx context.Context, req *connect.Request[v1.ListKnockoutMatchesRequest]) (*connect.Response[v1.ListKnockoutMatchesResponse], error) {
-	matches, err := h.svc.ListKnockoutMatches(ctx, req.Msg.ContestSlug)
-	if err != nil {
-		return nil, err
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.ListKnockoutMatchesRequest]) (*connect.Response[v1.ListKnockoutMatchesResponse], error) {
+		matches, err := h.svc.ListKnockoutMatches(ctx, req.Msg.ContestSlug)
+		if err != nil {
+			return nil, err
+		}
+
+		return connect.NewResponse(&v1.ListKnockoutMatchesResponse{
+			Matches: mapMatchesToProto(matches),
+		}), nil
 	}
 
-	return connect.NewResponse(&v1.ListKnockoutMatchesResponse{
-		Matches: mapMatchesToProto(matches),
-	}), nil
+	return interceptor.WithPublic(handlerFunc)(ctx, req)
 }
 
 func (h *MatchHandler) CreateMatch(ctx context.Context, req *connect.Request[v1.CreateMatchRequest]) (*connect.Response[v1.CreateMatchResponse], error) {
-	err := h.svc.CreateMatch(ctx, req.Msg.ContestSlug, mapProtoToMatch(req.Msg.Match))
-	if err != nil {
-		return nil, err
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.CreateMatchRequest]) (*connect.Response[v1.CreateMatchResponse], error) {
+		err := h.svc.CreateMatch(ctx, req.Msg.ContestSlug, mapProtoToMatch(req.Msg.Match))
+		if err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&v1.CreateMatchResponse{}), nil
 	}
-	return connect.NewResponse(&v1.CreateMatchResponse{}), nil
+
+	return interceptor.WithSuperadmin(handlerFunc)(ctx, req)
 }
 
 func mapMatchesToProto(matches []entity.Match) []*v1.Match {

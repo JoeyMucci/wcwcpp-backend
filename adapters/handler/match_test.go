@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/joey/wcwcpp-backend/core/entity"
 	"github.com/joey/wcwcpp-backend/pkg/api/v1"
 	"github.com/joey/wcwcpp-backend/ports"
@@ -148,8 +150,24 @@ func TestMatchHandler_ListKnockoutMatches(t *testing.T) {
 	})
 }
 
+func generateMatchTestToken(secret, userID, email string) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":   userID,
+		"email": email,
+		"exp":   time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, _ := token.SignedString([]byte(secret))
+	return tokenString
+}
+
 func TestMatchHandler_CreateMatch(t *testing.T) {
-	t.Run("success with fully mapped request", func(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test_secret")
+	t.Setenv("SUPERADMIN_EMAILS", "super1@example.com")
+
+	superToken := generateMatchTestToken("test_secret", "user1", "super1@example.com")
+	normalToken := generateMatchTestToken("test_secret", "user2", "normal@example.com")
+
+	t.Run("success with fully mapped request for superadmin", func(t *testing.T) {
 		var capturedMatch entity.Match
 		svc := &mockMatchService{
 			createMatchFunc: func(ctx context.Context, contestSlug string, match entity.Match) error {
@@ -163,7 +181,7 @@ func TestMatchHandler_CreateMatch(t *testing.T) {
 		goals1, goals2 := int64(3), int64(2)
 		round := int64(1)
 		roundIndex := int64(0)
-		resp, err := h.CreateMatch(context.Background(), connect.NewRequest(&v1.CreateMatchRequest{
+		req := connect.NewRequest(&v1.CreateMatchRequest{
 			ContestSlug: "world-cup-2026",
 			Match: &v1.Match{
 				Country1:      &v1.Country{Code: "BRA", FullName: "Brazil"},
@@ -173,7 +191,10 @@ func TestMatchHandler_CreateMatch(t *testing.T) {
 				Round:         round,
 				RoundIndex:    &roundIndex,
 			},
-		}))
+		})
+		req.Header().Set("Authorization", "Bearer "+superToken)
+
+		resp, err := h.CreateMatch(context.Background(), req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
@@ -185,6 +206,43 @@ func TestMatchHandler_CreateMatch(t *testing.T) {
 		assert.Equal(t, 0, *capturedMatch.RoundIndex)
 	})
 
+	t.Run("forbidden for normal user", func(t *testing.T) {
+		svc := &mockMatchService{
+			createMatchFunc: func(ctx context.Context, contestSlug string, match entity.Match) error {
+				return nil // Should not be called
+			},
+		}
+		h := NewMatchHandler(svc)
+
+		req := connect.NewRequest(&v1.CreateMatchRequest{
+			ContestSlug: "world-cup-2026",
+			Match:       &v1.Match{},
+		})
+		req.Header().Set("Authorization", "Bearer "+normalToken)
+
+		_, err := h.CreateMatch(context.Background(), req)
+		require.Error(t, err)
+		assert.Equal(t, connect.CodePermissionDenied, connect.CodeOf(err))
+	})
+
+	t.Run("unauthenticated with no token", func(t *testing.T) {
+		svc := &mockMatchService{
+			createMatchFunc: func(ctx context.Context, contestSlug string, match entity.Match) error {
+				return nil // Should not be called
+			},
+		}
+		h := NewMatchHandler(svc)
+
+		req := connect.NewRequest(&v1.CreateMatchRequest{
+			ContestSlug: "world-cup-2026",
+			Match:       &v1.Match{},
+		})
+
+		_, err := h.CreateMatch(context.Background(), req)
+		require.Error(t, err)
+		assert.Equal(t, connect.CodeUnauthenticated, connect.CodeOf(err))
+	})
+
 	t.Run("service error propagation", func(t *testing.T) {
 		svc := &mockMatchService{
 			createMatchFunc: func(ctx context.Context, contestSlug string, match entity.Match) error {
@@ -193,10 +251,13 @@ func TestMatchHandler_CreateMatch(t *testing.T) {
 		}
 		h := NewMatchHandler(svc)
 
-		_, err := h.CreateMatch(context.Background(), connect.NewRequest(&v1.CreateMatchRequest{
+		req := connect.NewRequest(&v1.CreateMatchRequest{
 			ContestSlug: "world-cup-2026",
 			Match:       &v1.Match{},
-		}))
+		})
+		req.Header().Set("Authorization", "Bearer "+superToken)
+
+		_, err := h.CreateMatch(context.Background(), req)
 		require.Error(t, err)
 		assert.Equal(t, "update match failed", err.Error())
 	})
