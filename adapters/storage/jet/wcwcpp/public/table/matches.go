@@ -17,16 +17,18 @@ type matchesTable struct {
 	postgres.Table
 
 	// Columns
-	ID                postgres.ColumnString
-	ContestID         postgres.ColumnString
-	Round             postgres.ColumnInteger
-	RoundIndex        postgres.ColumnInteger
-	Country1ID        postgres.ColumnString
-	Country2ID        postgres.ColumnString
-	Country1Goals     postgres.ColumnInteger
-	Country2Goals     postgres.ColumnInteger
-	Country1Penalties postgres.ColumnInteger
-	Country2Penalties postgres.ColumnInteger
+	ID                   postgres.ColumnString
+	ContestID            postgres.ColumnString
+	Round                postgres.ColumnInteger
+	RoundIndex           postgres.ColumnInteger
+	Country1ID           postgres.ColumnString
+	Country2ID           postgres.ColumnString
+	Country1Goals        postgres.ColumnInteger
+	Country2Goals        postgres.ColumnInteger
+	Country1Penalties    postgres.ColumnInteger
+	Country2Penalties    postgres.ColumnInteger
+	Country1ConductScore postgres.ColumnInteger
+	Country2ConductScore postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -68,35 +70,39 @@ func newMatchesTable(schemaName, tableName, alias string) *MatchesTable {
 
 func newMatchesTableImpl(schemaName, tableName, alias string) matchesTable {
 	var (
-		IDColumn                = postgres.StringColumn("id")
-		ContestIDColumn         = postgres.StringColumn("contest_id")
-		RoundColumn             = postgres.IntegerColumn("round")
-		RoundIndexColumn        = postgres.IntegerColumn("round_index")
-		Country1IDColumn        = postgres.StringColumn("country1_id")
-		Country2IDColumn        = postgres.StringColumn("country2_id")
-		Country1GoalsColumn     = postgres.IntegerColumn("country1_goals")
-		Country2GoalsColumn     = postgres.IntegerColumn("country2_goals")
-		Country1PenaltiesColumn = postgres.IntegerColumn("country1_penalties")
-		Country2PenaltiesColumn = postgres.IntegerColumn("country2_penalties")
-		allColumns              = postgres.ColumnList{IDColumn, ContestIDColumn, RoundColumn, RoundIndexColumn, Country1IDColumn, Country2IDColumn, Country1GoalsColumn, Country2GoalsColumn, Country1PenaltiesColumn, Country2PenaltiesColumn}
-		mutableColumns          = postgres.ColumnList{ContestIDColumn, RoundColumn, RoundIndexColumn, Country1IDColumn, Country2IDColumn, Country1GoalsColumn, Country2GoalsColumn, Country1PenaltiesColumn, Country2PenaltiesColumn}
-		defaultColumns          = postgres.ColumnList{IDColumn}
+		IDColumn                   = postgres.StringColumn("id")
+		ContestIDColumn            = postgres.StringColumn("contest_id")
+		RoundColumn                = postgres.IntegerColumn("round")
+		RoundIndexColumn           = postgres.IntegerColumn("round_index")
+		Country1IDColumn           = postgres.StringColumn("country1_id")
+		Country2IDColumn           = postgres.StringColumn("country2_id")
+		Country1GoalsColumn        = postgres.IntegerColumn("country1_goals")
+		Country2GoalsColumn        = postgres.IntegerColumn("country2_goals")
+		Country1PenaltiesColumn    = postgres.IntegerColumn("country1_penalties")
+		Country2PenaltiesColumn    = postgres.IntegerColumn("country2_penalties")
+		Country1ConductScoreColumn = postgres.IntegerColumn("country1_conduct_score")
+		Country2ConductScoreColumn = postgres.IntegerColumn("country2_conduct_score")
+		allColumns                 = postgres.ColumnList{IDColumn, ContestIDColumn, RoundColumn, RoundIndexColumn, Country1IDColumn, Country2IDColumn, Country1GoalsColumn, Country2GoalsColumn, Country1PenaltiesColumn, Country2PenaltiesColumn, Country1ConductScoreColumn, Country2ConductScoreColumn}
+		mutableColumns             = postgres.ColumnList{ContestIDColumn, RoundColumn, RoundIndexColumn, Country1IDColumn, Country2IDColumn, Country1GoalsColumn, Country2GoalsColumn, Country1PenaltiesColumn, Country2PenaltiesColumn, Country1ConductScoreColumn, Country2ConductScoreColumn}
+		defaultColumns             = postgres.ColumnList{IDColumn}
 	)
 
 	return matchesTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:                IDColumn,
-		ContestID:         ContestIDColumn,
-		Round:             RoundColumn,
-		RoundIndex:        RoundIndexColumn,
-		Country1ID:        Country1IDColumn,
-		Country2ID:        Country2IDColumn,
-		Country1Goals:     Country1GoalsColumn,
-		Country2Goals:     Country2GoalsColumn,
-		Country1Penalties: Country1PenaltiesColumn,
-		Country2Penalties: Country2PenaltiesColumn,
+		ID:                   IDColumn,
+		ContestID:            ContestIDColumn,
+		Round:                RoundColumn,
+		RoundIndex:           RoundIndexColumn,
+		Country1ID:           Country1IDColumn,
+		Country2ID:           Country2IDColumn,
+		Country1Goals:        Country1GoalsColumn,
+		Country2Goals:        Country2GoalsColumn,
+		Country1Penalties:    Country1PenaltiesColumn,
+		Country2Penalties:    Country2PenaltiesColumn,
+		Country1ConductScore: Country1ConductScoreColumn,
+		Country2ConductScore: Country2ConductScoreColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

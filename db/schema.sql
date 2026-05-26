@@ -108,5 +108,7 @@ CREATE TABLE matches (
     country1_goals INT,
     country2_goals INT,
     country1_penalties INT,
-    country2_penalties INT
+    country2_penalties INT,
+    country1_conduct_score INT,
+    country2_conduct_score INT
 );

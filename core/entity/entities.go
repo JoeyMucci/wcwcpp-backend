@@ -28,14 +28,16 @@ type Subcontest struct {
 	IsMember  bool
 }
 type Match struct {
-	Country1          *Country
-	Country2          *Country
-	Country1Goals     *int
-	Country2Goals     *int
-	Country1Penalties *int
-	Country2Penalties *int
-	Round             int
-	RoundIndex        *int
+	Country1             *Country
+	Country2             *Country
+	Country1Goals        *int
+	Country2Goals        *int
+	Country1Penalties    *int
+	Country2Penalties    *int
+	Country1ConductScore *int
+	Country2ConductScore *int
+	Round                int
+	RoundIndex           *int
 }
 type GroupPickEntry struct {
 	Country Country

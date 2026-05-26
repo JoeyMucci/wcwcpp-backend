@@ -84,6 +84,10 @@ message Match {
     optional int64 country2_goals = 5;
     optional int64 country1_penalties = 6;
     optional int64 country2_penalties = 7;
+    int64 round = 8;
+    optional int64 round_index = 9;
+    optional int64 country1_conduct_score = 10;
+    optional int64 country2_conduct_score = 11;
 }
 
 message LeaderboardEntry {

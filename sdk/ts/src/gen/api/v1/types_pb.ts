@@ -542,6 +542,26 @@ export class Match extends Message<Match> {
    */
   country2Penalties?: bigint;
 
+  /**
+   * @generated from field: int64 round = 8;
+   */
+  round = protoInt64.zero;
+
+  /**
+   * @generated from field: optional int64 round_index = 9;
+   */
+  roundIndex?: bigint;
+
+  /**
+   * @generated from field: optional int64 country1_conduct_score = 10;
+   */
+  country1ConductScore?: bigint;
+
+  /**
+   * @generated from field: optional int64 country2_conduct_score = 11;
+   */
+  country2ConductScore?: bigint;
+
   constructor(data?: PartialMessage<Match>) {
     super();
     proto3.util.initPartial(data, this);
@@ -556,6 +576,10 @@ export class Match extends Message<Match> {
     { no: 5, name: "country2_goals", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 6, name: "country1_penalties", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 7, name: "country2_penalties", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 8, name: "round", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 9, name: "round_index", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 10, name: "country1_conduct_score", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
+    { no: 11, name: "country2_conduct_score", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Match {

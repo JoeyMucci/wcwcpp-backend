@@ -293,3 +293,293 @@ func (r *ContestRepository) DeleteSubcontest(ctx context.Context, subcontestID s
 	_, err := stmt.ExecContext(ctx, r.db)
 	return err
 }
+
+type dbMatchRow struct {
+	model.Matches
+	Country1Code     *string
+	Country1FullName *string
+	Country2Code     *string
+	Country2FullName *string
+}
+
+func mapDbRowsToMatches(rows []dbMatchRow) []entity.Match {
+	matches := make([]entity.Match, 0, len(rows))
+	for _, row := range rows {
+		var c1, c2 *entity.Country
+		if row.Country1Code != nil && row.Country1FullName != nil {
+			c1 = &entity.Country{
+				Code:     *row.Country1Code,
+				FullName: *row.Country1FullName,
+			}
+		}
+		if row.Country2Code != nil && row.Country2FullName != nil {
+			c2 = &entity.Country{
+				Code:     *row.Country2Code,
+				FullName: *row.Country2FullName,
+			}
+		}
+
+		var c1g, c2g, c1p, c2p *int
+		if row.Country1Goals != nil {
+			val := int(*row.Country1Goals)
+			c1g = &val
+		}
+		if row.Country2Goals != nil {
+			val := int(*row.Country2Goals)
+			c2g = &val
+		}
+		if row.Country1Penalties != nil {
+			val := int(*row.Country1Penalties)
+			c1p = &val
+		}
+		if row.Country2Penalties != nil {
+			val := int(*row.Country2Penalties)
+			c2p = &val
+		}
+
+		var c1cs, c2cs *int
+		if row.Country1ConductScore != nil {
+			val := int(*row.Country1ConductScore)
+			c1cs = &val
+		}
+		if row.Country2ConductScore != nil {
+			val := int(*row.Country2ConductScore)
+			c2cs = &val
+		}
+
+		var roundIndex *int
+		if row.RoundIndex != nil {
+			val := int(*row.RoundIndex)
+			roundIndex = &val
+		}
+
+		matches = append(matches, entity.Match{
+			Country1:             c1,
+			Country2:             c2,
+			Country1Goals:        c1g,
+			Country2Goals:        c2g,
+			Country1Penalties:    c1p,
+			Country2Penalties:    c2p,
+			Country1ConductScore: c1cs,
+			Country2ConductScore: c2cs,
+			Round:                int(row.Round),
+			RoundIndex:           roundIndex,
+		})
+	}
+	return matches
+}
+
+func (r *ContestRepository) ListGroupMatches(ctx context.Context, contestID string, letter string) ([]entity.Match, error) {
+	parsedContestID := uuid.MustParse(contestID)
+	c1 := table.Countries.AS("country1")
+	c2 := table.Countries.AS("country2")
+
+	stmt := postgres.SELECT(
+		table.Matches.AllColumns,
+		c1.Code.AS("db_match_row.country1_code"),
+		c1.FullName.AS("db_match_row.country1_full_name"),
+		c2.Code.AS("db_match_row.country2_code"),
+		c2.FullName.AS("db_match_row.country2_full_name"),
+	).FROM(
+		table.Matches.
+			LEFT_JOIN(c1, table.Matches.Country1ID.EQ(c1.ID)).
+			LEFT_JOIN(c2, table.Matches.Country2ID.EQ(c2.ID)).
+			INNER_JOIN(table.GroupStandings, table.GroupStandings.ContestID.EQ(table.Matches.ContestID).
+				AND(table.GroupStandings.CountryID.EQ(table.Matches.Country1ID))),
+	).WHERE(
+		table.Matches.Round.EQ(postgres.Int32(0)).
+			AND(table.Matches.ContestID.EQ(postgres.UUID(parsedContestID))).
+			AND(table.GroupStandings.Letter.EQ(postgres.String(letter))),
+	)
+
+	var rows []dbMatchRow
+	if err := stmt.QueryContext(ctx, r.db, &rows); err != nil {
+		return nil, err
+	}
+
+	return mapDbRowsToMatches(rows), nil
+}
+
+func (r *ContestRepository) ListKnockoutMatches(ctx context.Context, contestID string) ([]entity.Match, error) {
+	parsedContestID := uuid.MustParse(contestID)
+	c1 := table.Countries.AS("country1")
+	c2 := table.Countries.AS("country2")
+
+	stmt := postgres.SELECT(
+		table.Matches.AllColumns,
+		c1.Code.AS("db_match_row.country1_code"),
+		c1.FullName.AS("db_match_row.country1_full_name"),
+		c2.Code.AS("db_match_row.country2_code"),
+		c2.FullName.AS("db_match_row.country2_full_name"),
+	).FROM(
+		table.Matches.
+			LEFT_JOIN(c1, table.Matches.Country1ID.EQ(c1.ID)).
+			LEFT_JOIN(c2, table.Matches.Country2ID.EQ(c2.ID)),
+	).WHERE(
+		table.Matches.Round.GT(postgres.Int32(0)).
+			AND(table.Matches.ContestID.EQ(postgres.UUID(parsedContestID))),
+	).ORDER_BY(
+		table.Matches.Round.ASC(),
+		table.Matches.RoundIndex.ASC(),
+	)
+
+	var rows []dbMatchRow
+	if err := stmt.QueryContext(ctx, r.db, &rows); err != nil {
+		return nil, err
+	}
+
+	return mapDbRowsToMatches(rows), nil
+}
+
+func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, match entity.Match) error {
+	parsedContestID := uuid.MustParse(contestID)
+
+	countryMap, err := r.GetCountryCodeToIDMap(ctx)
+	if err != nil {
+		return err
+	}
+
+	var c1ID, c2ID *uuid.UUID
+	if match.Country1 != nil {
+		if idStr, ok := countryMap[match.Country1.Code]; ok {
+			id := uuid.MustParse(idStr)
+			c1ID = &id
+		}
+	}
+	if match.Country2 != nil {
+		if idStr, ok := countryMap[match.Country2.Code]; ok {
+			id := uuid.MustParse(idStr)
+			c2ID = &id
+		}
+	}
+
+	var c1g, c2g, c1p, c2p, c1cs, c2cs *int32
+	if match.Country1Goals != nil {
+		val := int32(*match.Country1Goals)
+		c1g = &val
+	}
+	if match.Country2Goals != nil {
+		val := int32(*match.Country2Goals)
+		c2g = &val
+	}
+	if match.Country1Penalties != nil {
+		val := int32(*match.Country1Penalties)
+		c1p = &val
+	}
+	if match.Country2Penalties != nil {
+		val := int32(*match.Country2Penalties)
+		c2p = &val
+	}
+	if match.Country1ConductScore != nil {
+		val := int32(*match.Country1ConductScore)
+		c1cs = &val
+	}
+	if match.Country2ConductScore != nil {
+		val := int32(*match.Country2ConductScore)
+		c2cs = &val
+	}
+
+	var existingMatch model.Matches
+	var isKnockout bool
+
+	// 1. Find the existing match either by Round/Index or by Countries
+	if match.Round > 0 && match.RoundIndex != nil {
+		stmt := postgres.SELECT(table.Matches.AllColumns).FROM(table.Matches).WHERE(
+			table.Matches.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.Matches.Round.EQ(postgres.Int32(int32(match.Round)))).
+				AND(table.Matches.RoundIndex.EQ(postgres.Int32(int32(*match.RoundIndex)))),
+		)
+
+		if err := stmt.QueryContext(ctx, r.db, &existingMatch); err != nil {
+			return fmt.Errorf("failed to find knockout match by round/index: %w", err)
+		}
+		isKnockout = true
+	} else {
+		// Lookup by countries & round to prevent double-encounter ambiguity
+		if c1ID == nil || c2ID == nil {
+			return errors.New("match must have both countries defined to update by countries")
+		}
+
+		stmt := postgres.SELECT(table.Matches.AllColumns).FROM(table.Matches).WHERE(
+			table.Matches.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.Matches.Round.EQ(postgres.Int32(int32(match.Round)))).
+				AND(
+					(table.Matches.Country1ID.EQ(postgres.UUID(*c1ID)).AND(table.Matches.Country2ID.EQ(postgres.UUID(*c2ID)))).
+						OR(table.Matches.Country1ID.EQ(postgres.UUID(*c2ID)).AND(table.Matches.Country2ID.EQ(postgres.UUID(*c1ID)))),
+				),
+		)
+
+		if err := stmt.QueryContext(ctx, r.db, &existingMatch); err != nil {
+			return fmt.Errorf("failed to find match by countries: %w", err)
+		}
+		isKnockout = existingMatch.Round > 0
+	}
+
+	// 2. Modify only the provided (non-nil) fields on the existing record
+	updateModel := existingMatch
+	var hasUpdates bool
+
+	// Countries can only be updated for Knockout stage matches (Group stage pairings are static)
+	if isKnockout {
+		if c1ID != nil {
+			updateModel.Country1ID = c1ID
+			hasUpdates = true
+		}
+		if c2ID != nil {
+			updateModel.Country2ID = c2ID
+			hasUpdates = true
+		}
+	}
+
+	if match.Country1Goals != nil {
+		updateModel.Country1Goals = c1g
+		hasUpdates = true
+	}
+	if match.Country2Goals != nil {
+		updateModel.Country2Goals = c2g
+		hasUpdates = true
+	}
+	if match.Country1ConductScore != nil {
+		updateModel.Country1ConductScore = c1cs
+		hasUpdates = true
+	}
+	if match.Country2ConductScore != nil {
+		updateModel.Country2ConductScore = c2cs
+		hasUpdates = true
+	}
+
+	// Penalties are only updated for Knockout stage matches (Group stage matches can end in draws)
+	if isKnockout {
+		if match.Country1Penalties != nil {
+			updateModel.Country1Penalties = c1p
+			hasUpdates = true
+		}
+		if match.Country2Penalties != nil {
+			updateModel.Country2Penalties = c2p
+			hasUpdates = true
+		}
+	}
+
+	if !hasUpdates {
+		return nil // Nothing to update
+	}
+
+	// 3. Statically save all columns. Since updateModel contains the fully populated
+	// database record with only the modified fields changed, this safely updates our subset
+	// while completely preserving all other existing database columns!
+	updateStmt := table.Matches.UPDATE(
+		table.Matches.Country1ID,
+		table.Matches.Country2ID,
+		table.Matches.Country1Goals,
+		table.Matches.Country2Goals,
+		table.Matches.Country1Penalties,
+		table.Matches.Country2Penalties,
+		table.Matches.Country1ConductScore,
+		table.Matches.Country2ConductScore,
+	).
+		MODEL(updateModel).
+		WHERE(table.Matches.ID.EQ(postgres.UUID(existingMatch.ID)))
+
+	_, err = updateStmt.ExecContext(ctx, r.db)
+	return err
+}

@@ -55,13 +55,16 @@ func main() {
 
 	// 3. Initialize Core Services
 	authService := service.NewAuthService(userRepo, tokenValidator)
-	contestService := service.NewContestService(postgres.NewContestRepository(db))
+	contestRepo := postgres.NewContestRepository(db)
+	contestService := service.NewContestService(contestRepo)
 	usersService := service.NewUsersService(userRepo)
+	matchService := service.NewMatchService(contestRepo)
 
 	// 4. Initialize Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	contestHandler := handler.NewContestHandler(contestService)
 	usersHandler := handler.NewUsersHandler(usersService)
+	matchHandler := handler.NewMatchHandler(matchService)
 
 	leaderboardRepo := postgres.NewLeaderboardRepository(db)
 	leaderboardService := service.NewLeaderboardService(leaderboardRepo)
@@ -98,6 +101,9 @@ func main() {
 
 	picksPath, picksSvcHandler := v1connect.NewPicksServiceHandler(picksHandler, connect.WithCodec(jsonCodec))
 	mux.Handle(picksPath, picksSvcHandler)
+
+	matchPath, matchSvcHandler := v1connect.NewMatchServiceHandler(matchHandler, connect.WithCodec(jsonCodec))
+	mux.Handle(matchPath, matchSvcHandler)
 
 	fmt.Println("Starting server on :8080")
 	// Use h2c for unencrypted HTTP/2 (required for Connect without TLS)

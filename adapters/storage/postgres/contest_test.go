@@ -497,3 +497,118 @@ func TestContestRepository_DeleteSubcontestAndGetBySlug(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, fetchedAfterDelete)
 }
+
+func TestContestRepository_MatchOperations(t *testing.T) {
+	repo := NewContestRepository(setupTestDB(t))
+	ctx := context.Background()
+
+	// 1. Setup a unique contest
+	uniqueSuffix := uuid.New().String()
+	contest := &entity.Contest{
+		Title:              "Matches Contest " + uniqueSuffix,
+		Slug:               "matches-contest-" + uniqueSuffix,
+		GroupUnlockDate:    time.Now(),
+		GroupLockDate:      time.Now().Add(time.Hour),
+		KnockoutUnlockDate: time.Now().Add(24 * time.Hour),
+		KnockoutLockDate:   time.Now().Add(48 * time.Hour),
+	}
+	err := repo.CreateContest(ctx, contest)
+	require.NoError(t, err)
+
+	// 2. Setup countries (USA, MEX, CAN, ARG)
+	cCodes := []string{"USA", "MEX", "CAN", "ARG"}
+	var countries []entity.Country
+	for _, code := range cCodes {
+		countries = append(countries, entity.Country{Code: code, FullName: "Team " + code})
+	}
+	err = repo.CreateCountries(ctx, countries)
+	require.NoError(t, err)
+
+	// 3. Seed group standings for Group A
+	groups := []entity.Group{
+		{
+			Letter:    "A",
+			Countries: countries,
+		},
+	}
+	err = repo.CreateGroupStandings(ctx, contest.ID, groups)
+	require.NoError(t, err)
+
+	// 4. Create a group match (USA vs MEX) and a knockout match
+	groupMatch := entity.Match{
+		Round:    0,
+		Country1: &countries[0], // USA
+		Country2: &countries[1], // MEX
+	}
+
+	roundIndex := 0
+	knockoutMatch := entity.Match{
+		Round:      1,
+		RoundIndex: &roundIndex,
+		Country1:   nil,
+		Country2:   nil,
+	}
+
+	err = repo.CreateMatches(ctx, contest.ID, []entity.Match{groupMatch, knockoutMatch})
+	require.NoError(t, err)
+
+	// 5. List and verify Group Matches
+	groupMatches, err := repo.ListGroupMatches(ctx, contest.ID, "A")
+	require.NoError(t, err)
+	require.Len(t, groupMatches, 1)
+	assert.Equal(t, "USA", groupMatches[0].Country1.Code)
+	assert.Equal(t, "MEX", groupMatches[0].Country2.Code)
+	assert.Nil(t, groupMatches[0].Country1Goals)
+	assert.Nil(t, groupMatches[0].Country2Goals)
+
+	// 6. Update Group Stage Match: USA wins 3 - 0 MEX (as per scoring.md wins/points logic)
+	goals1, goals2 := 3, 0
+	groupMatch.Country1Goals = &goals1
+	groupMatch.Country2Goals = &goals2
+	err = repo.UpdateMatch(ctx, contest.ID, groupMatch)
+	require.NoError(t, err)
+
+	// Re-fetch and verify Group Match goals
+	groupMatches, err = repo.ListGroupMatches(ctx, contest.ID, "A")
+	require.NoError(t, err)
+	require.Len(t, groupMatches, 1)
+	assert.Equal(t, 3, *groupMatches[0].Country1Goals)
+	assert.Equal(t, 0, *groupMatches[0].Country2Goals)
+
+	// 7. List and verify Knockout Matches
+	koMatches, err := repo.ListKnockoutMatches(ctx, contest.ID)
+	require.NoError(t, err)
+	require.Len(t, koMatches, 1)
+	assert.Equal(t, 1, koMatches[0].Round)
+	assert.Equal(t, 0, *koMatches[0].RoundIndex)
+	assert.Nil(t, koMatches[0].Country1)
+	assert.Nil(t, koMatches[0].Country2)
+
+	// 8. Update Knockout Stage Match: CAN vs ARG, ends 2 - 2, CAN wins on penalties 4 - 3 (scoring.md knockout points)
+	koGoals1, koGoals2 := 2, 2
+	koPenalties1, koPenalties2 := 4, 3
+	updatedKoMatch := entity.Match{
+		Round:             1,
+		RoundIndex:        &roundIndex,
+		Country1:          &countries[2], // CAN
+		Country2:          &countries[3], // ARG
+		Country1Goals:     &koGoals1,
+		Country2Goals:     &koGoals2,
+		Country1Penalties: &koPenalties1,
+		Country2Penalties: &koPenalties2,
+	}
+
+	err = repo.UpdateMatch(ctx, contest.ID, updatedKoMatch)
+	require.NoError(t, err)
+
+	// Re-fetch and verify Knockout Match details
+	koMatches, err = repo.ListKnockoutMatches(ctx, contest.ID)
+	require.NoError(t, err)
+	require.Len(t, koMatches, 1)
+	assert.Equal(t, "CAN", koMatches[0].Country1.Code)
+	assert.Equal(t, "ARG", koMatches[0].Country2.Code)
+	assert.Equal(t, 2, *koMatches[0].Country1Goals)
+	assert.Equal(t, 2, *koMatches[0].Country2Goals)
+	assert.Equal(t, 4, *koMatches[0].Country1Penalties)
+	assert.Equal(t, 3, *koMatches[0].Country2Penalties)
+}

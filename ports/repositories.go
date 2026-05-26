@@ -27,6 +27,9 @@ type ContestRepository interface {
 	GetSubcontestByJoinCode(ctx context.Context, joinCode string) (*entity.Subcontest, error)
 	ListSubcontests(ctx context.Context, contestID string, userID string) ([]entity.Subcontest, error)
 	DeleteSubcontest(ctx context.Context, subcontestID string) error
+	ListGroupMatches(ctx context.Context, contestID string, letter string) ([]entity.Match, error)
+	ListKnockoutMatches(ctx context.Context, contestID string) ([]entity.Match, error)
+	UpdateMatch(ctx context.Context, contestID string, match entity.Match) error
 	Search
 }
 
