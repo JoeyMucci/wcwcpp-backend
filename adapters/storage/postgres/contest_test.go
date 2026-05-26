@@ -5,7 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-jet/jet/v2/postgres"
 	"github.com/google/uuid"
+	"github.com/joey/wcwcpp-backend/adapters/storage/jet/wcwcpp/public/model"
+	"github.com/joey/wcwcpp-backend/adapters/storage/jet/wcwcpp/public/table"
 	"github.com/joey/wcwcpp-backend/core/entity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -574,6 +577,72 @@ func TestContestRepository_MatchOperations(t *testing.T) {
 	require.Len(t, groupMatches, 1)
 	assert.Equal(t, 3, *groupMatches[0].Country1Goals)
 	assert.Equal(t, 0, *groupMatches[0].Country2Goals)
+
+	// Retrieve the actual country UUIDs from the database
+	var dbUSA, dbMEX model.Countries
+	err = postgres.SELECT(table.Countries.AllColumns).FROM(table.Countries).WHERE(
+		table.Countries.Code.EQ(postgres.String("USA")),
+	).QueryContext(ctx, repo.db, &dbUSA)
+	require.NoError(t, err)
+
+	err = postgres.SELECT(table.Countries.AllColumns).FROM(table.Countries).WHERE(
+		table.Countries.Code.EQ(postgres.String("MEX")),
+	).QueryContext(ctx, repo.db, &dbMEX)
+	require.NoError(t, err)
+
+	// Verify group standings: USA has 3 points and +3 goal diff; MEX has 0 points and -3 goal diff
+	var stdUSA, stdMEX model.GroupStandings
+	err = postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+		table.GroupStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+			AND(table.GroupStandings.CountryID.EQ(postgres.UUID(dbUSA.ID))), // USA
+	).QueryContext(ctx, repo.db, &stdUSA)
+	require.NoError(t, err)
+	assert.Equal(t, int32(3), stdUSA.Points)
+	assert.Equal(t, int32(1), stdUSA.Wins)
+	assert.Equal(t, int32(3), stdUSA.Gf)
+	assert.Equal(t, int32(0), stdUSA.Ga)
+	assert.Equal(t, int32(3), stdUSA.Gd)
+
+	err = postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+		table.GroupStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+			AND(table.GroupStandings.CountryID.EQ(postgres.UUID(dbMEX.ID))), // MEX
+	).QueryContext(ctx, repo.db, &stdMEX)
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), stdMEX.Points)
+	assert.Equal(t, int32(1), stdMEX.Losses)
+	assert.Equal(t, int32(0), stdMEX.Gf)
+	assert.Equal(t, int32(3), stdMEX.Ga)
+	assert.Equal(t, int32(-3), stdMEX.Gd)
+
+	// Correct the score: update to USA wins 2 - 1 MEX
+	newGoals1, newGoals2 := 2, 1
+	groupMatch.Country1Goals = &newGoals1
+	groupMatch.Country2Goals = &newGoals2
+	err = repo.UpdateMatch(ctx, contest.ID, groupMatch)
+	require.NoError(t, err)
+
+	// Verify corrected group standings
+	err = postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+		table.GroupStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+			AND(table.GroupStandings.CountryID.EQ(postgres.UUID(dbUSA.ID))), // USA
+	).QueryContext(ctx, repo.db, &stdUSA)
+	require.NoError(t, err)
+	assert.Equal(t, int32(3), stdUSA.Points)
+	assert.Equal(t, int32(1), stdUSA.Wins)
+	assert.Equal(t, int32(2), stdUSA.Gf)
+	assert.Equal(t, int32(1), stdUSA.Ga)
+	assert.Equal(t, int32(1), stdUSA.Gd)
+
+	err = postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+		table.GroupStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+			AND(table.GroupStandings.CountryID.EQ(postgres.UUID(dbMEX.ID))), // MEX
+	).QueryContext(ctx, repo.db, &stdMEX)
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), stdMEX.Points)
+	assert.Equal(t, int32(1), stdMEX.Losses)
+	assert.Equal(t, int32(1), stdMEX.Gf)
+	assert.Equal(t, int32(2), stdMEX.Ga)
+	assert.Equal(t, int32(-1), stdMEX.Gd)
 
 	// 7. List and verify Knockout Matches
 	koMatches, err := repo.ListKnockoutMatches(ctx, contest.ID)

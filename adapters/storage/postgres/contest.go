@@ -564,9 +564,14 @@ func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, m
 		return nil // Nothing to update
 	}
 
-	// 3. Statically save all columns. Since updateModel contains the fully populated
-	// database record with only the modified fields changed, this safely updates our subset
-	// while completely preserving all other existing database columns!
+	// 3. Perform the update and side effects in a single SQL transaction to guarantee consistency
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Update the match record
 	updateStmt := table.Matches.UPDATE(
 		table.Matches.Country1ID,
 		table.Matches.Country2ID,
@@ -580,6 +585,160 @@ func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, m
 		MODEL(updateModel).
 		WHERE(table.Matches.ID.EQ(postgres.UUID(existingMatch.ID)))
 
-	_, err = updateStmt.ExecContext(ctx, r.db)
-	return err
+	if _, err := updateStmt.ExecContext(ctx, tx); err != nil {
+		return fmt.Errorf("failed to update match: %w", err)
+	}
+
+	// If this is a group stage match and a score has been recorded/updated, update the two countries' standings
+	if !isKnockout && updateModel.Country1Goals != nil && updateModel.Country2Goals != nil {
+		if existingMatch.Country1ID == nil || existingMatch.Country2ID == nil {
+			return errors.New("cannot update standings for match with undefined countries")
+		}
+		c1ID := *existingMatch.Country1ID
+		c2ID := *existingMatch.Country2ID
+
+		var standing1, standing2 model.GroupStandings
+
+		// Fetch current standings
+		stmt1 := postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(c1ID))),
+		)
+		if err := stmt1.QueryContext(ctx, tx, &standing1); err != nil {
+			return fmt.Errorf("failed to fetch standing for country1: %w", err)
+		}
+
+		stmt2 := postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(c2ID))),
+		)
+		if err := stmt2.QueryContext(ctx, tx, &standing2); err != nil {
+			return fmt.Errorf("failed to fetch standing for country2: %w", err)
+		}
+
+		// 1. Subtract previous score contributions if a score was already recorded
+		if existingMatch.Country1Goals != nil && existingMatch.Country2Goals != nil {
+			oldG1 := *existingMatch.Country1Goals
+			oldG2 := *existingMatch.Country2Goals
+			oldCs1 := int32(0)
+			if existingMatch.Country1ConductScore != nil {
+				oldCs1 = *existingMatch.Country1ConductScore
+			}
+			oldCs2 := int32(0)
+			if existingMatch.Country2ConductScore != nil {
+				oldCs2 = *existingMatch.Country2ConductScore
+			}
+
+			// Revert Country 1 statistics
+			standing1.Gf -= oldG1
+			standing1.Ga -= oldG2
+			standing1.Gd = standing1.Gf - standing1.Ga
+			standing1.Cs -= oldCs1
+
+			// Revert Country 2 statistics
+			standing2.Gf -= oldG2
+			standing2.Ga -= oldG1
+			standing2.Gd = standing2.Gf - standing2.Ga
+			standing2.Cs -= oldCs2
+
+			// Revert wins/draws/losses/points
+			if oldG1 > oldG2 {
+				standing1.Wins--
+				standing1.Points -= 3
+				standing2.Losses--
+			} else if oldG1 == oldG2 {
+				standing1.Draws--
+				standing1.Points -= 1
+				standing2.Draws--
+				standing2.Points -= 1
+			} else {
+				standing1.Losses--
+				standing2.Wins--
+				standing2.Points -= 3
+			}
+		}
+
+		// 2. Add the new score contributions
+		newG1 := *updateModel.Country1Goals
+		newG2 := *updateModel.Country2Goals
+		newCs1 := int32(0)
+		if updateModel.Country1ConductScore != nil {
+			newCs1 = *updateModel.Country1ConductScore
+		}
+		newCs2 := int32(0)
+		if updateModel.Country2ConductScore != nil {
+			newCs2 = *updateModel.Country2ConductScore
+		}
+
+		// Apply Country 1 statistics
+		standing1.Gf += newG1
+		standing1.Ga += newG2
+		standing1.Gd = standing1.Gf - standing1.Ga
+		standing1.Cs += newCs1
+
+		// Apply Country 2 statistics
+		standing2.Gf += newG2
+		standing2.Ga += newG1
+		standing2.Gd = standing2.Gf - standing2.Ga
+		standing2.Cs += newCs2
+
+		// Apply wins/draws/losses/points
+		if newG1 > newG2 {
+			standing1.Wins++
+			standing1.Points += 3
+			standing2.Losses++
+		} else if newG1 == newG2 {
+			standing1.Draws++
+			standing1.Points += 1
+			standing2.Draws++
+			standing2.Points += 1
+		} else {
+			standing1.Losses++
+			standing2.Wins++
+			standing2.Points += 3
+		}
+
+		// 3. Persist the updated standings for both countries
+		updStandingStmt1 := table.GroupStandings.UPDATE(
+			table.GroupStandings.Wins,
+			table.GroupStandings.Draws,
+			table.GroupStandings.Losses,
+			table.GroupStandings.Gf,
+			table.GroupStandings.Ga,
+			table.GroupStandings.Gd,
+			table.GroupStandings.Points,
+			table.GroupStandings.Cs,
+		).
+			MODEL(standing1).
+			WHERE(table.GroupStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(c1ID))))
+
+		if _, err := updStandingStmt1.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("failed to update standing for country1: %w", err)
+		}
+
+		updStandingStmt2 := table.GroupStandings.UPDATE(
+			table.GroupStandings.Wins,
+			table.GroupStandings.Draws,
+			table.GroupStandings.Losses,
+			table.GroupStandings.Gf,
+			table.GroupStandings.Ga,
+			table.GroupStandings.Gd,
+			table.GroupStandings.Points,
+			table.GroupStandings.Cs,
+		).
+			MODEL(standing2).
+			WHERE(table.GroupStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(c2ID))))
+
+		if _, err := updStandingStmt2.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("failed to update standing for country2: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }
