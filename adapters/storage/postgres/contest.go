@@ -515,6 +515,10 @@ func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, m
 		isKnockout = existingMatch.Round > 0
 	}
 
+	if existingMatch.Country1Goals != nil && existingMatch.Country2Goals != nil {
+		return errors.New("match has already been completed and cannot be updated again")
+	}
+
 	// 2. Modify only the provided (non-nil) fields on the existing record
 	updateModel := existingMatch
 	var hasUpdates bool
@@ -828,6 +832,99 @@ func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, m
 
 				if _, err := updThirdMatchStmt.ExecContext(ctx, tx); err != nil {
 					return fmt.Errorf("failed to seed loser into Third-Place match: %w", err)
+				}
+			}
+
+			// 3. Update knockout standings and increment user points immediately
+			var achievedRound int32
+			var points int32
+			switch currentRound {
+			case 1:
+				achievedRound = 2
+				points = 15
+			case 2:
+				achievedRound = 3
+				points = 20
+			case 3:
+				achievedRound = 4
+				points = 25
+			case 4:
+				achievedRound = 5
+				points = 30
+			case 5:
+				achievedRound = 6
+				if currentRoundIndex == 1 {
+					points = 5 // Third Place match winner
+				} else {
+					points = 35 // Final match winner (Champion)
+				}
+			}
+
+			if achievedRound > 0 {
+				// Seed actual winner knockout standing
+				winnerStandingsStmt := table.KnockoutStandings.INSERT(
+					table.KnockoutStandings.ContestID,
+					table.KnockoutStandings.CountryID,
+					table.KnockoutStandings.Round,
+				).VALUES(
+					postgres.UUID(existingMatch.ContestID),
+					postgres.UUID(winnerID),
+					postgres.Int32(achievedRound),
+				).ON_CONFLICT(
+					table.KnockoutStandings.ContestID,
+					table.KnockoutStandings.CountryID,
+				).DO_UPDATE(
+					postgres.SET(table.KnockoutStandings.Round.SET(postgres.Int32(achievedRound))),
+				)
+				if _, err := winnerStandingsStmt.ExecContext(ctx, tx); err != nil {
+					return fmt.Errorf("failed to upsert winner knockout standings: %w", err)
+				}
+
+				// Award points immediately to users who predicted this country to achieve this round
+				if points > 0 {
+					var pickedUsers []model.KnockoutPicks
+					findPicksStmt := postgres.SELECT(table.KnockoutPicks.UserID).
+						FROM(table.KnockoutPicks).
+						WHERE(
+							table.KnockoutPicks.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+								AND(table.KnockoutPicks.CountryID.EQ(postgres.UUID(winnerID))).
+								AND(table.KnockoutPicks.Round.EQ(postgres.Int32(achievedRound))),
+						)
+					if err := findPicksStmt.QueryContext(ctx, tx, &pickedUsers); err != nil {
+						return fmt.Errorf("failed to query knockout picks: %w", err)
+					}
+					for _, u := range pickedUsers {
+						updStandingsStmt := table.ContestStandings.UPDATE(table.ContestStandings.KnockoutScore).
+							SET(table.ContestStandings.KnockoutScore.ADD(postgres.Int32(points))).
+							WHERE(
+								table.ContestStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+									AND(table.ContestStandings.UserID.EQ(postgres.UUID(u.UserID))),
+							)
+						if _, err := updStandingsStmt.ExecContext(ctx, tx); err != nil {
+							return fmt.Errorf("failed to update contest standings for user %s: %w", u.UserID.String(), err)
+						}
+					}
+				}
+			}
+
+			// If Semifinal (Round = 4), the loser also reaches Round 5 (Third-Place Match participant)
+			if currentRound == 4 {
+				loserStandingsStmt := table.KnockoutStandings.INSERT(
+					table.KnockoutStandings.ContestID,
+					table.KnockoutStandings.CountryID,
+					table.KnockoutStandings.Round,
+				).VALUES(
+					postgres.UUID(existingMatch.ContestID),
+					postgres.UUID(loserID),
+					postgres.Int32(5),
+				).ON_CONFLICT(
+					table.KnockoutStandings.ContestID,
+					table.KnockoutStandings.CountryID,
+				).DO_UPDATE(
+					postgres.SET(table.KnockoutStandings.Round.SET(postgres.Int32(5))),
+				)
+				if _, err := loserStandingsStmt.ExecContext(ctx, tx); err != nil {
+					return fmt.Errorf("failed to upsert Semifinal loser knockout standings: %w", err)
 				}
 			}
 		}
