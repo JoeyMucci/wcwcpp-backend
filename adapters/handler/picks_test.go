@@ -302,8 +302,8 @@ func TestPicksHandler_ListKnockoutPicks(t *testing.T) {
 			},
 		},
 		{
-			name:  "unauthenticated",
-			token: "",
+			name:        "unauthenticated",
+			token:       "",
 			expectError: true,
 			errCode:     connect.CodeUnauthenticated,
 		},
@@ -390,6 +390,14 @@ func TestPicksHandler_CreateKnockoutPicks(t *testing.T) {
 			token: validToken,
 			reqPayload: &v1.CreateKnockoutPicksRequest{
 				ContestSlug: "nonexistent",
+				Pick: &v1.KnockoutPick{
+					Entries: []*v1.KnockoutEntry{
+						{
+							Country: &v1.Country{Code: "USA"},
+							Round:   16,
+						},
+					},
+				},
 			},
 			mockFunc: func(ctx context.Context, userID string, contestSlug string, pick entity.KnockoutPick) error {
 				return errors.New("contest not found")
@@ -402,6 +410,14 @@ func TestPicksHandler_CreateKnockoutPicks(t *testing.T) {
 			token: validToken,
 			reqPayload: &v1.CreateKnockoutPicksRequest{
 				ContestSlug: "world-cup-2026",
+				Pick: &v1.KnockoutPick{
+					Entries: []*v1.KnockoutEntry{
+						{
+							Country: &v1.Country{Code: "USA"},
+							Round:   16,
+						},
+					},
+				},
 			},
 			mockFunc: func(ctx context.Context, userID string, contestSlug string, pick entity.KnockoutPick) error {
 				return errors.New("knockout stage picks are locked")
