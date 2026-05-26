@@ -537,7 +537,7 @@ func TestContestRepository_MatchOperations(t *testing.T) {
 	err = repo.CreateGroupStandings(ctx, contest.ID, groups)
 	require.NoError(t, err)
 
-	// 4. Create a group match (USA vs MEX) and a knockout match
+	// 4. Create a group match (USA vs MEX) and bracket-progression knockout matches
 	groupMatch := entity.Match{
 		Round:    0,
 		Country1: &countries[0], // USA
@@ -548,11 +548,51 @@ func TestContestRepository_MatchOperations(t *testing.T) {
 	knockoutMatch := entity.Match{
 		Round:      1,
 		RoundIndex: &roundIndex,
-		Country1:   nil,
-		Country2:   nil,
 	}
 
-	err = repo.CreateMatches(ctx, contest.ID, []entity.Match{groupMatch, knockoutMatch})
+	nextRoundIndex := 0
+	nextKnockoutMatch := entity.Match{
+		Round:      2,
+		RoundIndex: &nextRoundIndex,
+	}
+
+	sfIndex0 := 0
+	sfMatch1 := entity.Match{
+		Round:      4,
+		RoundIndex: &sfIndex0,
+		Country1:   &countries[0], // USA
+		Country2:   &countries[1], // MEX
+	}
+
+	sfIndex1 := 1
+	sfMatch2 := entity.Match{
+		Round:      4,
+		RoundIndex: &sfIndex1,
+		Country1:   &countries[2], // CAN
+		Country2:   &countries[3], // ARG
+	}
+
+	fIndex0 := 0
+	finalMatch := entity.Match{
+		Round:      5,
+		RoundIndex: &fIndex0,
+	}
+
+	tpIndex1 := 1
+	thirdPlaceMatch := entity.Match{
+		Round:      5,
+		RoundIndex: &tpIndex1,
+	}
+
+	err = repo.CreateMatches(ctx, contest.ID, []entity.Match{
+		groupMatch,
+		knockoutMatch,
+		nextKnockoutMatch,
+		sfMatch1,
+		sfMatch2,
+		finalMatch,
+		thirdPlaceMatch,
+	})
 	require.NoError(t, err)
 
 	// 5. List and verify Group Matches
@@ -647,13 +687,19 @@ func TestContestRepository_MatchOperations(t *testing.T) {
 	// 7. List and verify Knockout Matches
 	koMatches, err := repo.ListKnockoutMatches(ctx, contest.ID)
 	require.NoError(t, err)
-	require.Len(t, koMatches, 1)
-	assert.Equal(t, 1, koMatches[0].Round)
-	assert.Equal(t, 0, *koMatches[0].RoundIndex)
-	assert.Nil(t, koMatches[0].Country1)
-	assert.Nil(t, koMatches[0].Country2)
+	require.Len(t, koMatches, 6)
 
-	// 8. Update Knockout Stage Match: CAN vs ARG, ends 2 - 2, CAN wins on penalties 4 - 3 (scoring.md knockout points)
+	// Verify that the Round 1 Match is unseeded initially
+	var matchR1 entity.Match
+	for _, m := range koMatches {
+		if m.Round == 1 && *m.RoundIndex == 0 {
+			matchR1 = m
+		}
+	}
+	assert.Nil(t, matchR1.Country1)
+	assert.Nil(t, matchR1.Country2)
+
+	// 8. Update Knockout Stage Match: CAN vs ARG, ends 2 - 2, CAN wins on penalties 4 - 3
 	koGoals1, koGoals2 := 2, 2
 	koPenalties1, koPenalties2 := 4, 3
 	updatedKoMatch := entity.Match{
@@ -670,14 +716,83 @@ func TestContestRepository_MatchOperations(t *testing.T) {
 	err = repo.UpdateMatch(ctx, contest.ID, updatedKoMatch)
 	require.NoError(t, err)
 
-	// Re-fetch and verify Knockout Match details
+	// Re-fetch and verify Knockout Match details and deterministic winner progression
 	koMatches, err = repo.ListKnockoutMatches(ctx, contest.ID)
 	require.NoError(t, err)
-	require.Len(t, koMatches, 1)
-	assert.Equal(t, "CAN", koMatches[0].Country1.Code)
-	assert.Equal(t, "ARG", koMatches[0].Country2.Code)
-	assert.Equal(t, 2, *koMatches[0].Country1Goals)
-	assert.Equal(t, 2, *koMatches[0].Country2Goals)
-	assert.Equal(t, 4, *koMatches[0].Country1Penalties)
-	assert.Equal(t, 3, *koMatches[0].Country2Penalties)
+	require.Len(t, koMatches, 6)
+
+	for _, m := range koMatches {
+		if m.Round == 1 && *m.RoundIndex == 0 {
+			matchR1 = m
+		}
+	}
+	assert.Equal(t, "CAN", matchR1.Country1.Code)
+	assert.Equal(t, "ARG", matchR1.Country2.Code)
+	assert.Equal(t, 2, *matchR1.Country1Goals)
+	assert.Equal(t, 2, *matchR1.Country2Goals)
+	assert.Equal(t, 4, *matchR1.Country1Penalties)
+	assert.Equal(t, 3, *matchR1.Country2Penalties)
+
+	// Verify that the winner (CAN) deterministically progressed to Round 2 Index 0 as Country1
+	var matchR2 entity.Match
+	for _, m := range koMatches {
+		if m.Round == 2 && *m.RoundIndex == 0 {
+			matchR2 = m
+		}
+	}
+	require.NotNil(t, matchR2.Country1)
+	assert.Equal(t, "CAN", matchR2.Country1.Code)
+	assert.Nil(t, matchR2.Country2)
+
+	// 9. Update Semifinal 1: USA (3) vs MEX (1) -> USA wins.
+	sf1Goals1, sf1Goals2 := 3, 1
+	updatedSf1 := entity.Match{
+		Round:         4,
+		RoundIndex:    &sfIndex0,
+		Country1:      &countries[0], // USA
+		Country2:      &countries[1], // MEX
+		Country1Goals: &sf1Goals1,
+		Country2Goals: &sf1Goals2,
+	}
+	err = repo.UpdateMatch(ctx, contest.ID, updatedSf1)
+	require.NoError(t, err)
+
+	// 10. Update Semifinal 2: CAN (0) vs ARG (2) -> ARG wins.
+	sf2Goals1, sf2Goals2 := 0, 2
+	updatedSf2 := entity.Match{
+		Round:         4,
+		RoundIndex:    &sfIndex1,
+		Country1:      &countries[2], // CAN
+		Country2:      &countries[3], // ARG
+		Country1Goals: &sf2Goals1,
+		Country2Goals: &sf2Goals2,
+	}
+	err = repo.UpdateMatch(ctx, contest.ID, updatedSf2)
+	require.NoError(t, err)
+
+	// 11. Re-fetch and verify Final and Third-Place progression
+	koMatches, err = repo.ListKnockoutMatches(ctx, contest.ID)
+	require.NoError(t, err)
+
+	var finalM, thirdPlaceM entity.Match
+	for _, m := range koMatches {
+		if m.Round == 5 && *m.RoundIndex == 0 {
+			finalM = m
+		}
+		if m.Round == 5 && *m.RoundIndex == 1 {
+			thirdPlaceM = m
+		}
+	}
+
+	// Final should be USA (winner of SF 1) vs ARG (winner of SF 2)
+	require.NotNil(t, finalM.Country1)
+	assert.Equal(t, "USA", finalM.Country1.Code)
+	require.NotNil(t, finalM.Country2)
+	assert.Equal(t, "ARG", finalM.Country2.Code)
+
+	// Third-Place should be MEX (loser of SF 1) vs CAN (loser of SF 2)
+	require.NotNil(t, thirdPlaceM.Country1)
+	assert.Equal(t, "MEX", thirdPlaceM.Country1.Code)
+	require.NotNil(t, thirdPlaceM.Country2)
+	assert.Equal(t, "CAN", thirdPlaceM.Country2.Code)
 }

@@ -736,6 +736,103 @@ func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, m
 		}
 	}
 
+	// If this is a knockout match and a score has been recorded, automatically advance the winner (and loser if Semifinal)
+	if isKnockout && updateModel.Country1Goals != nil && updateModel.Country2Goals != nil {
+		if updateModel.Country1ID == nil || updateModel.Country2ID == nil {
+			return errors.New("cannot progress knockout match with undefined countries")
+		}
+
+		c1ID := *updateModel.Country1ID
+		c2ID := *updateModel.Country2ID
+
+		g1 := *updateModel.Country1Goals
+		g2 := *updateModel.Country2Goals
+
+		var winnerID, loserID uuid.UUID
+		var hasWinner bool
+
+		if g1 > g2 {
+			winnerID = c1ID
+			loserID = c2ID
+			hasWinner = true
+		} else if g1 < g2 {
+			winnerID = c2ID
+			loserID = c1ID
+			hasWinner = true
+		} else {
+			// Check penalties if goals are tied
+			if updateModel.Country1Penalties != nil && updateModel.Country2Penalties != nil {
+				p1 := *updateModel.Country1Penalties
+				p2 := *updateModel.Country2Penalties
+				if p1 > p2 {
+					winnerID = c1ID
+					loserID = c2ID
+					hasWinner = true
+				} else if p1 < p2 {
+					winnerID = c2ID
+					loserID = c1ID
+					hasWinner = true
+				}
+			}
+		}
+
+		if hasWinner && existingMatch.RoundIndex != nil {
+			currentRound := int(existingMatch.Round)
+			currentRoundIndex := int(*existingMatch.RoundIndex)
+
+			// 1. Advance the winner to the next round
+			nextRound := currentRound + 1
+			nextRoundIndex := currentRoundIndex / 2
+			isCountry1Slot := (currentRoundIndex % 2) == 0
+
+			// Only progress if we haven't reached the Final/Third-Place round yet (Round 5)
+			if currentRound < 5 {
+				var targetCol postgres.Column
+				if isCountry1Slot {
+					targetCol = table.Matches.Country1ID
+				} else {
+					targetCol = table.Matches.Country2ID
+				}
+
+				updNextMatchStmt := table.Matches.UPDATE(targetCol).
+					SET(postgres.UUID(winnerID)).
+					WHERE(
+						table.Matches.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+							AND(table.Matches.Round.EQ(postgres.Int32(int32(nextRound)))).
+							AND(table.Matches.RoundIndex.EQ(postgres.Int32(int32(nextRoundIndex)))),
+					)
+
+				if _, err := updNextMatchStmt.ExecContext(ctx, tx); err != nil {
+					return fmt.Errorf("failed to seed winner into next match (Round %d, Index %d): %w", nextRound, nextRoundIndex, err)
+				}
+			}
+
+			// 2. If this is a Semifinal (Round = 4), seed the loser into the Third-Place match (Round = 5, Index = 1)
+			if currentRound == 4 {
+				thirdPlaceRound := 5
+				thirdPlaceRoundIndex := 1
+				var loserTargetCol postgres.Column
+				if currentRoundIndex == 0 {
+					loserTargetCol = table.Matches.Country1ID
+				} else {
+					loserTargetCol = table.Matches.Country2ID
+				}
+
+				updThirdMatchStmt := table.Matches.UPDATE(loserTargetCol).
+					SET(postgres.UUID(loserID)).
+					WHERE(
+						table.Matches.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+							AND(table.Matches.Round.EQ(postgres.Int32(int32(thirdPlaceRound)))).
+							AND(table.Matches.RoundIndex.EQ(postgres.Int32(int32(thirdPlaceRoundIndex)))),
+					)
+
+				if _, err := updThirdMatchStmt.ExecContext(ctx, tx); err != nil {
+					return fmt.Errorf("failed to seed loser into Third-Place match: %w", err)
+				}
+			}
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
