@@ -30,12 +30,35 @@ message Country {
     string full_name = 2;
 }
 
+message RankedCountry {
+    string code = 1;
+    string full_name = 2;
+    int64 points = 3;
+    int64 wins = 4;
+    int64 draws = 5;
+    int64 losses = 6;
+    int64 goals_for = 7;
+    int64 goals_against = 8;
+    int64 goal_difference = 9;
+    int64 conduct_score = 10;
+    bool is_third_place_qualifier = 11;
+}
+
 message Group {
     string letter = 1;
     repeated Country countries = 2 [(buf.validate.field).repeated = {
         min_items: 4,
         max_items: 4
     }];
+}
+
+message RankedGroup {
+    string letter = 1;
+    repeated RankedCountry ranked_countries = 2 [(buf.validate.field).repeated = {
+        min_items: 4,
+        max_items: 4
+    }];
+    optional bool extra_qualifier = 3;
 }
 
 message GroupPick {
@@ -62,6 +85,10 @@ message Match {
     optional int64 country2_goals = 5;
     optional int64 country1_penalties = 6;
     optional int64 country2_penalties = 7;
+    int64 round = 8;
+    optional int64 round_index = 9;
+    optional int64 country1_conduct_score = 10;
+    optional int64 country2_conduct_score = 11;
 }
 
 message LeaderboardEntry {

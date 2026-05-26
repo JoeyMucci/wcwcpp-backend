@@ -12,8 +12,17 @@ import (
 )
 
 type GroupStandings struct {
-	ContestID uuid.UUID `sql:"primary_key"`
-	CountryID uuid.UUID `sql:"primary_key"`
-	Letter    string
-	Points    int32
+	ContestID             uuid.UUID `sql:"primary_key"`
+	CountryID             uuid.UUID `sql:"primary_key"`
+	Letter                string
+	Points                int32
+	Wins                  int32
+	Draws                 int32
+	Losses                int32
+	Gf                    int32
+	Ga                    int32
+	Gd                    int32
+	Cs                    int32
+	Rank                  *int32
+	IsThirdPlaceQualifier *bool
 }

@@ -64,6 +64,15 @@ CREATE TABLE group_standings (
     country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
     letter VARCHAR(1) NOT NULL,
     points INT NOT NULL DEFAULT 0,
+    wins INT NOT NULL DEFAULT 0,
+    draws INT NOT NULL DEFAULT 0,
+    losses INT NOT NULL DEFAULT 0,
+    gf INT NOT NULL DEFAULT 0,
+    ga INT NOT NULL DEFAULT 0,
+    gd INT NOT NULL DEFAULT 0,
+    cs INT NOT NULL DEFAULT 0,
+    rank INT,
+    is_third_place_qualifier BOOLEAN,
     PRIMARY KEY (contest_id, country_id)
 );
 
@@ -78,7 +87,9 @@ CREATE TABLE group_picks (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
     country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
+    letter VARCHAR(1) NOT NULL,
     place INT NOT NULL,
+    extra_qualifier BOOLEAN NOT NULL DEFAULT FALSE,
     PRIMARY KEY (user_id, contest_id, country_id)
 );
 
@@ -100,5 +111,7 @@ CREATE TABLE matches (
     country1_goals INT,
     country2_goals INT,
     country1_penalties INT,
-    country2_penalties INT
+    country2_penalties INT,
+    country1_conduct_score INT,
+    country2_conduct_score INT
 );

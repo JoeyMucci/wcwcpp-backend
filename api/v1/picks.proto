@@ -5,18 +5,24 @@ package api.v1;
 option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
 
 import "api/v1/types.proto";
+import "buf/validate/validate.proto";
 
 message ListGroupPicksRequest {
     string contest_slug = 1;
 }
 
 message ListGroupPicksResponse {
-    repeated GroupPick picks = 1;
+    repeated GroupPick picks = 1 [(buf.validate.field).repeated = {
+        max_items: 12
+    }];
+    repeated RankedGroup results = 2 [(buf.validate.field).repeated = {
+        max_items: 12
+    }];
 }
 
 message CreateGroupPicksRequest {
     string contest_slug = 1;
-    GroupPick pick = 2;
+    repeated GroupPick picks = 2;
 }
 
 message CreateGroupPicksResponse {}
@@ -26,7 +32,8 @@ message ListKnockoutPicksRequest {
 }
 
 message ListKnockoutPicksResponse {
-    repeated KnockoutPick picks = 1;
+    KnockoutPick pick = 1;
+    KnockoutPick result = 2;
 }
 
 message CreateKnockoutPicksRequest {

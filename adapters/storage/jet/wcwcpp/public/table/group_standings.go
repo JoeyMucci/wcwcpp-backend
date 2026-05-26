@@ -17,10 +17,19 @@ type groupStandingsTable struct {
 	postgres.Table
 
 	// Columns
-	ContestID postgres.ColumnString
-	CountryID postgres.ColumnString
-	Letter    postgres.ColumnString
-	Points    postgres.ColumnInteger
+	ContestID             postgres.ColumnString
+	CountryID             postgres.ColumnString
+	Letter                postgres.ColumnString
+	Points                postgres.ColumnInteger
+	Wins                  postgres.ColumnInteger
+	Draws                 postgres.ColumnInteger
+	Losses                postgres.ColumnInteger
+	Gf                    postgres.ColumnInteger
+	Ga                    postgres.ColumnInteger
+	Gd                    postgres.ColumnInteger
+	Cs                    postgres.ColumnInteger
+	Rank                  postgres.ColumnInteger
+	IsThirdPlaceQualifier postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -62,23 +71,41 @@ func newGroupStandingsTable(schemaName, tableName, alias string) *GroupStandings
 
 func newGroupStandingsTableImpl(schemaName, tableName, alias string) groupStandingsTable {
 	var (
-		ContestIDColumn = postgres.StringColumn("contest_id")
-		CountryIDColumn = postgres.StringColumn("country_id")
-		LetterColumn    = postgres.StringColumn("letter")
-		PointsColumn    = postgres.IntegerColumn("points")
-		allColumns      = postgres.ColumnList{ContestIDColumn, CountryIDColumn, LetterColumn, PointsColumn}
-		mutableColumns  = postgres.ColumnList{LetterColumn, PointsColumn}
-		defaultColumns  = postgres.ColumnList{PointsColumn}
+		ContestIDColumn             = postgres.StringColumn("contest_id")
+		CountryIDColumn             = postgres.StringColumn("country_id")
+		LetterColumn                = postgres.StringColumn("letter")
+		PointsColumn                = postgres.IntegerColumn("points")
+		WinsColumn                  = postgres.IntegerColumn("wins")
+		DrawsColumn                 = postgres.IntegerColumn("draws")
+		LossesColumn                = postgres.IntegerColumn("losses")
+		GfColumn                    = postgres.IntegerColumn("gf")
+		GaColumn                    = postgres.IntegerColumn("ga")
+		GdColumn                    = postgres.IntegerColumn("gd")
+		CsColumn                    = postgres.IntegerColumn("cs")
+		RankColumn                  = postgres.IntegerColumn("rank")
+		IsThirdPlaceQualifierColumn = postgres.BoolColumn("is_third_place_qualifier")
+		allColumns                  = postgres.ColumnList{ContestIDColumn, CountryIDColumn, LetterColumn, PointsColumn, WinsColumn, DrawsColumn, LossesColumn, GfColumn, GaColumn, GdColumn, CsColumn, RankColumn, IsThirdPlaceQualifierColumn}
+		mutableColumns              = postgres.ColumnList{LetterColumn, PointsColumn, WinsColumn, DrawsColumn, LossesColumn, GfColumn, GaColumn, GdColumn, CsColumn, RankColumn, IsThirdPlaceQualifierColumn}
+		defaultColumns              = postgres.ColumnList{PointsColumn, WinsColumn, DrawsColumn, LossesColumn, GfColumn, GaColumn, GdColumn, CsColumn}
 	)
 
 	return groupStandingsTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ContestID: ContestIDColumn,
-		CountryID: CountryIDColumn,
-		Letter:    LetterColumn,
-		Points:    PointsColumn,
+		ContestID:             ContestIDColumn,
+		CountryID:             CountryIDColumn,
+		Letter:                LetterColumn,
+		Points:                PointsColumn,
+		Wins:                  WinsColumn,
+		Draws:                 DrawsColumn,
+		Losses:                LossesColumn,
+		Gf:                    GfColumn,
+		Ga:                    GaColumn,
+		Gd:                    GdColumn,
+		Cs:                    CsColumn,
+		Rank:                  RankColumn,
+		IsThirdPlaceQualifier: IsThirdPlaceQualifierColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

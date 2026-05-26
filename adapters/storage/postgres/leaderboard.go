@@ -16,7 +16,7 @@ import (
 )
 
 type LeaderboardRepository struct {
-	*ContestSearcher
+	*Searcher
 	db *sql.DB
 }
 
@@ -24,8 +24,8 @@ var _ ports.LeaderboardRepository = (*LeaderboardRepository)(nil)
 
 func NewLeaderboardRepository(db *sql.DB) *LeaderboardRepository {
 	return &LeaderboardRepository{
-		ContestSearcher: NewContestSearcher(db),
-		db:              db,
+		Searcher: NewSearcher(db),
+		db:       db,
 	}
 }
 
@@ -155,7 +155,6 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	return leaderboard, nil
 }
 
-
 func (r *LeaderboardRepository) HasSubcontestAccess(ctx context.Context, userID string, subcontestSlug string) (bool, error) {
 	parsedUserID := uuid.MustParse(userID)
 	stmt := postgres.SELECT(table.Subcontests.AllColumns).
@@ -215,4 +214,3 @@ func mapKnockoutDBRowsToEntity(rows []dbLeaderboardRow) []entity.LeaderboardEntr
 	}
 	return entries
 }
-

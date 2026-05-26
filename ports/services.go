@@ -13,6 +13,8 @@ type ContestService interface {
 	CreateSubcontest(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error)
 	DeleteSubcontest(ctx context.Context, userID string, subcontestSlug string) error
 	JoinSubcontest(ctx context.Context, userID string, joinCode string) error
+	FinalizeGroupRankings(ctx context.Context, contestSlug string, groupLetter string, orderedCountryCodes []string) error
+	FinalizeThirdPlaceQualifier(ctx context.Context, contestSlug string, groupLetter string, isWildcardQualifier bool) error
 }
 
 type LeaderboardService interface {
@@ -27,10 +29,10 @@ type MatchService interface {
 }
 
 type PicksService interface {
-	ListGroupPicks(ctx context.Context, contestSlug string) ([]entity.GroupPick, error)
-	CreateGroupPicks(ctx context.Context, contestSlug string, pick entity.GroupPick) error
-	ListKnockoutPicks(ctx context.Context, contestSlug string) ([]entity.KnockoutPick, error)
-	CreateKnockoutPicks(ctx context.Context, contestSlug string, pick entity.KnockoutPick) error
+	ListGroupPicks(ctx context.Context, userID string, contestSlug string) ([]entity.GroupPick, []entity.GroupStanding, error)
+	CreateGroupPicks(ctx context.Context, userID string, contestSlug string, picks []entity.GroupPick) error
+	ListKnockoutPicks(ctx context.Context, userID string, contestSlug string) (entity.KnockoutPick, entity.KnockoutPick, error)
+	CreateKnockoutPicks(ctx context.Context, userID string, contestSlug string, pick entity.KnockoutPick) error
 }
 
 type UsersService interface {

@@ -28,17 +28,52 @@ type Subcontest struct {
 	IsMember  bool
 }
 type Match struct {
-	Country1          *Country
-	Country2          *Country
-	Country1Goals     *int
-	Country2Goals     *int
-	Country1Penalties *int
-	Country2Penalties *int
-	Round             int
-	RoundIndex        *int
+	Country1             *Country
+	Country2             *Country
+	Country1Goals        *int
+	Country2Goals        *int
+	Country1Penalties    *int
+	Country2Penalties    *int
+	Country1ConductScore *int
+	Country2ConductScore *int
+	Round                int
+	RoundIndex           *int
 }
-type GroupPick struct{}
-type KnockoutPick struct{}
+type GroupPickEntry struct {
+	Country Country
+	Place   int // 1–4, predicted finish position
+}
+
+type GroupPick struct {
+	Letter         string
+	Entries        []GroupPickEntry // 4 entries, sorted by Place
+	ExtraQualifier bool
+}
+
+type KnockoutPickEntry struct {
+	Country Country
+	Round   int
+}
+
+type KnockoutPick struct {
+	Entries []KnockoutPickEntry
+}
+
+type GroupStanding struct {
+	Country               Country
+	Letter                string
+	Points                int64
+	Wins                  int64
+	Draws                 int64
+	Losses                int64
+	GoalsFor              int64
+	GoalsAgainst          int64
+	GoalDifference        int64
+	ConductScore          int64
+	Rank                  *int32
+	IsThirdPlaceQualifier *bool
+}
+
 type LeaderboardEntry struct {
 	Name  string
 	Score int64

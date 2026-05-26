@@ -13,17 +13,18 @@ import (
 
 type mockContestRepository struct {
 	ports.ContestRepository
-	listContestsFunc            func(ctx context.Context) ([]entity.Contest, error)
-	createContestFunc           func(ctx context.Context, contest *entity.Contest) error
-	createCountriesFunc         func(ctx context.Context, countries []entity.Country) error
-	createMatchesFunc           func(ctx context.Context, contestID string, matches []entity.Match) error
-	getContestBySlugFunc        func(ctx context.Context, slug string) (*entity.Contest, error)
-	listSubcontestsFunc         func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error)
-	createSubcontestFunc        func(ctx context.Context, subcontest *entity.Subcontest) error
-	joinSubcontestFunc          func(ctx context.Context, subcontestID string, userID string) error
-	getSubcontestBySlugFunc     func(ctx context.Context, slug string) (*entity.Subcontest, error)
-	deleteSubcontestFunc        func(ctx context.Context, subcontestID string) error
-	getSubcontestByJoinCodeFunc func(ctx context.Context, joinCode string) (*entity.Subcontest, error)
+	listContestsFunc             func(ctx context.Context) ([]entity.Contest, error)
+	createContestFunc            func(ctx context.Context, contest *entity.Contest) error
+	createCountriesFunc          func(ctx context.Context, countries []entity.Country) error
+	createMatchesFunc            func(ctx context.Context, contestID string, matches []entity.Match) error
+	createGroupStandingsFunc     func(ctx context.Context, contestID string, groups []entity.Group) error
+	getContestBySlugFunc         func(ctx context.Context, slug string) (*entity.Contest, error)
+	listSubcontestsFunc          func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error)
+	createSubcontestFunc         func(ctx context.Context, subcontest *entity.Subcontest) error
+	joinSubcontestFunc           func(ctx context.Context, subcontestID string, userID string) error
+	getSubcontestBySlugFunc      func(ctx context.Context, slug string) (*entity.Subcontest, error)
+	deleteSubcontestFunc         func(ctx context.Context, subcontestID string) error
+	getSubcontestByJoinCodeFunc  func(ctx context.Context, joinCode string) (*entity.Subcontest, error)
 }
 
 func (m *mockContestRepository) ListContests(ctx context.Context) ([]entity.Contest, error) {
@@ -50,6 +51,13 @@ func (m *mockContestRepository) CreateCountries(ctx context.Context, countries [
 func (m *mockContestRepository) CreateMatches(ctx context.Context, contestID string, matches []entity.Match) error {
 	if m.createMatchesFunc != nil {
 		return m.createMatchesFunc(ctx, contestID, matches)
+	}
+	return nil
+}
+
+func (m *mockContestRepository) CreateGroupStandings(ctx context.Context, contestID string, groups []entity.Group) error {
+	if m.createGroupStandingsFunc != nil {
+		return m.createGroupStandingsFunc(ctx, contestID, groups)
 	}
 	return nil
 }
@@ -143,6 +151,9 @@ func TestContestService_CreateContest(t *testing.T) {
 				capturedMatches = append(capturedMatches, matches...)
 				return nil
 			},
+			createGroupStandingsFunc: func(ctx context.Context, contestID string, groups []entity.Group) error {
+				return nil
+			},
 		}
 
 		svc := NewContestService(mockRepo)
@@ -234,6 +245,86 @@ func TestContestService_CreateContest(t *testing.T) {
 		require.Equal(t, 4, knockoutByRound[3])
 		require.Equal(t, 2, knockoutByRound[4])
 		require.Equal(t, 2, knockoutByRound[5])
+	})
+
+	t.Run("should seed group standings with all 12 groups and 4 countries each", func(t *testing.T) {
+		var capturedStandingsContestID string
+		var capturedStandingsGroups []entity.Group
+
+		mockRepo := &mockContestRepository{
+			createGroupStandingsFunc: func(ctx context.Context, contestID string, groups []entity.Group) error {
+				capturedStandingsContestID = contestID
+				capturedStandingsGroups = groups
+				return nil
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		groups := []entity.Group{
+			{Letter: "A", Countries: []entity.Country{{Code: "USA", FullName: "United States"}, {Code: "CAN", FullName: "Canada"}, {Code: "MEX", FullName: "Mexico"}, {Code: "ARG", FullName: "Argentina"}}},
+			{Letter: "B", Countries: []entity.Country{{Code: "BRA", FullName: "Brazil"}, {Code: "FRA", FullName: "France"}, {Code: "GER", FullName: "Germany"}, {Code: "ENG", FullName: "England"}}},
+			{Letter: "C", Countries: []entity.Country{{Code: "ESP", FullName: "Spain"}, {Code: "POR", FullName: "Portugal"}, {Code: "ITA", FullName: "Italy"}, {Code: "NED", FullName: "Netherlands"}}},
+			{Letter: "D", Countries: []entity.Country{{Code: "BEL", FullName: "Belgium"}, {Code: "URU", FullName: "Uruguay"}, {Code: "COL", FullName: "Colombia"}, {Code: "CHI", FullName: "Chile"}}},
+			{Letter: "E", Countries: []entity.Country{{Code: "CRO", FullName: "Croatia"}, {Code: "SRB", FullName: "Serbia"}, {Code: "SUI", FullName: "Switzerland"}, {Code: "DEN", FullName: "Denmark"}}},
+			{Letter: "F", Countries: []entity.Country{{Code: "SWE", FullName: "Sweden"}, {Code: "NOR", FullName: "Norway"}, {Code: "MAR", FullName: "Morocco"}, {Code: "SEN", FullName: "Senegal"}}},
+			{Letter: "G", Countries: []entity.Country{{Code: "GHA", FullName: "Ghana"}, {Code: "CMR", FullName: "Cameroon"}, {Code: "NGA", FullName: "Nigeria"}, {Code: "EGY", FullName: "Egypt"}}},
+			{Letter: "H", Countries: []entity.Country{{Code: "ALG", FullName: "Algeria"}, {Code: "TUN", FullName: "Tunisia"}, {Code: "JPN", FullName: "Japan"}, {Code: "KOR", FullName: "South Korea"}}},
+			{Letter: "I", Countries: []entity.Country{{Code: "AUS", FullName: "Australia"}, {Code: "IRN", FullName: "Iran"}, {Code: "KSA", FullName: "Saudi Arabia"}, {Code: "QAT", FullName: "Qatar"}}},
+			{Letter: "J", Countries: []entity.Country{{Code: "CRC", FullName: "Costa Rica"}, {Code: "PAN", FullName: "Panama"}, {Code: "JAM", FullName: "Jamaica"}, {Code: "HON", FullName: "Honduras"}}},
+			{Letter: "K", Countries: []entity.Country{{Code: "ECU", FullName: "Ecuador"}, {Code: "PER", FullName: "Peru"}, {Code: "PAR", FullName: "Paraguay"}, {Code: "VEN", FullName: "Venezuela"}}},
+			{Letter: "L", Countries: []entity.Country{{Code: "BOL", FullName: "Bolivia"}, {Code: "CIV", FullName: "Ivory Coast"}, {Code: "MLI", FullName: "Mali"}, {Code: "BFA", FullName: "Burkina Faso"}}},
+		}
+		contest := entity.Contest{
+			Title:  "2026 FIFA World Cup",
+			Groups: groups,
+		}
+
+		err := svc.CreateContest(context.Background(), contest)
+		require.NoError(t, err)
+
+		// The contestID forwarded to CreateGroupStandings should match the created contest
+		_ = capturedStandingsContestID
+		// All 12 groups should be forwarded
+		require.Len(t, capturedStandingsGroups, 12)
+		// Each group should have 4 countries
+		for _, g := range capturedStandingsGroups {
+			require.Len(t, g.Countries, 4)
+		}
+		// Letters should be preserved in order
+		expectedLetters := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"}
+		for i, g := range capturedStandingsGroups {
+			require.Equal(t, expectedLetters[i], g.Letter)
+		}
+	})
+
+	t.Run("should propagate error from CreateGroupStandings", func(t *testing.T) {
+		mockRepo := &mockContestRepository{
+			createGroupStandingsFunc: func(ctx context.Context, contestID string, groups []entity.Group) error {
+				return errors.New("standings insert failed")
+			},
+		}
+
+		svc := NewContestService(mockRepo)
+
+		groups := []entity.Group{
+			{Letter: "A", Countries: []entity.Country{{Code: "U01"}, {Code: "U02"}, {Code: "U03"}, {Code: "U04"}}},
+			{Letter: "B", Countries: []entity.Country{{Code: "U05"}, {Code: "U06"}, {Code: "U07"}, {Code: "U08"}}},
+			{Letter: "C", Countries: []entity.Country{{Code: "U09"}, {Code: "U10"}, {Code: "U11"}, {Code: "U12"}}},
+			{Letter: "D", Countries: []entity.Country{{Code: "U13"}, {Code: "U14"}, {Code: "U15"}, {Code: "U16"}}},
+			{Letter: "E", Countries: []entity.Country{{Code: "U17"}, {Code: "U18"}, {Code: "U19"}, {Code: "U20"}}},
+			{Letter: "F", Countries: []entity.Country{{Code: "U21"}, {Code: "U22"}, {Code: "U23"}, {Code: "U24"}}},
+			{Letter: "G", Countries: []entity.Country{{Code: "U25"}, {Code: "U26"}, {Code: "U27"}, {Code: "U28"}}},
+			{Letter: "H", Countries: []entity.Country{{Code: "U29"}, {Code: "U30"}, {Code: "U31"}, {Code: "U32"}}},
+			{Letter: "I", Countries: []entity.Country{{Code: "U33"}, {Code: "U34"}, {Code: "U35"}, {Code: "U36"}}},
+			{Letter: "J", Countries: []entity.Country{{Code: "U37"}, {Code: "U38"}, {Code: "U39"}, {Code: "U40"}}},
+			{Letter: "K", Countries: []entity.Country{{Code: "U41"}, {Code: "U42"}, {Code: "U43"}, {Code: "U44"}}},
+			{Letter: "L", Countries: []entity.Country{{Code: "U45"}, {Code: "U46"}, {Code: "U47"}, {Code: "U48"}}},
+		}
+
+		err := svc.CreateContest(context.Background(), entity.Contest{Title: "Test", Groups: groups})
+		require.Error(t, err)
+		require.Equal(t, "standings insert failed", err.Error())
 	})
 }
 

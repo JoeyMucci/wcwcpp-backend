@@ -10,9 +10,10 @@ type TokenValidator interface {
 	ValidateGoogleToken(ctx context.Context, token string) (email string, err error)
 }
 
-type ContestSearch interface {
+type Search interface {
 	GetContestBySlug(ctx context.Context, slug string) (*entity.Contest, error)
 	GetSubcontestBySlug(ctx context.Context, slug string) (*entity.Subcontest, error)
+	GetCountryCodeToIDMap(ctx context.Context) (map[string]string, error)
 }
 
 type ContestRepository interface {
@@ -20,12 +21,18 @@ type ContestRepository interface {
 	CreateContest(ctx context.Context, contest *entity.Contest) error
 	CreateCountries(ctx context.Context, countries []entity.Country) error
 	CreateMatches(ctx context.Context, contestID string, matches []entity.Match) error
+	CreateGroupStandings(ctx context.Context, contestID string, groups []entity.Group) error
 	CreateSubcontest(ctx context.Context, subcontest *entity.Subcontest) error
 	JoinSubcontest(ctx context.Context, subcontestID string, userID string) error
 	GetSubcontestByJoinCode(ctx context.Context, joinCode string) (*entity.Subcontest, error)
 	ListSubcontests(ctx context.Context, contestID string, userID string) ([]entity.Subcontest, error)
 	DeleteSubcontest(ctx context.Context, subcontestID string) error
-	ContestSearch
+	ListGroupMatches(ctx context.Context, contestID string, letter string) ([]entity.Match, error)
+	ListKnockoutMatches(ctx context.Context, contestID string) ([]entity.Match, error)
+	UpdateMatch(ctx context.Context, contestID string, match entity.Match) error
+	FinalizeGroupRankings(ctx context.Context, contestID string, groupLetter string, orderedCountryCodes []string) error
+	FinalizeThirdPlaceQualifier(ctx context.Context, contestID string, groupLetter string, isWildcardQualifier bool) error
+	Search
 }
 
 type UserRepository interface {
@@ -39,10 +46,20 @@ type LeaderboardRepository interface {
 	Leaderboard(ctx context.Context, contestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 	Subleaderboard(ctx context.Context, subcontestID string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error)
 	HasSubcontestAccess(ctx context.Context, userID string, subcontestSlug string) (bool, error)
-	ContestSearch
+	Search
 }
 
 type StandingsRepository interface {
 	IncrementUserGroupScore(ctx context.Context, userID string, contestID string, score int)
 	IncrementUserKnockoutScore(ctx context.Context, userID string, contestID string, score int)
+}
+
+type PicksRepository interface {
+	ListGroupPicks(ctx context.Context, userID string, contestID string) ([]entity.GroupPick, error)
+	ListGroupStandings(ctx context.Context, contestID string) ([]entity.GroupStanding, error)
+	CreateGroupPicks(ctx context.Context, userID string, contestID string, picks []entity.GroupPick) error
+	ListKnockoutPicks(ctx context.Context, userID string, contestID string) (entity.KnockoutPick, error)
+	ListKnockoutResults(ctx context.Context, contestID string) (entity.KnockoutPick, error)
+	CreateKnockoutPicks(ctx context.Context, userID string, contestID string, pick entity.KnockoutPick) error
+	Search
 }

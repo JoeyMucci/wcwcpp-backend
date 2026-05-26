@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
@@ -15,7 +16,7 @@ import (
 )
 
 type ContestRepository struct {
-	*ContestSearcher
+	*Searcher
 	db *sql.DB
 }
 
@@ -23,19 +24,19 @@ var _ ports.ContestRepository = (*ContestRepository)(nil)
 
 func NewContestRepository(db *sql.DB) *ContestRepository {
 	return &ContestRepository{
-		ContestSearcher: NewContestSearcher(db),
-		db:              db,
+		Searcher: NewSearcher(db),
+		db:       db,
 	}
 }
 
 func (r *ContestRepository) ListContests(ctx context.Context) ([]entity.Contest, error) {
 	stmt := postgres.SELECT(table.Contests.AllColumns).FROM(table.Contests)
-	
+
 	var dbContests []model.Contests
 	if err := stmt.QueryContext(ctx, r.db, &dbContests); err != nil {
 		return nil, err
 	}
-	
+
 	var contests []entity.Contest
 	for _, c := range dbContests {
 		contests = append(contests, entity.Contest{
@@ -48,7 +49,7 @@ func (r *ContestRepository) ListContests(ctx context.Context) ([]entity.Contest,
 			KnockoutLockDate:   c.KnockoutLockDate,
 		})
 	}
-	
+
 	return contests, nil
 }
 
@@ -147,6 +148,36 @@ func (r *ContestRepository) CreateMatches(ctx context.Context, contestID string,
 	return err
 }
 
+func (r *ContestRepository) CreateGroupStandings(ctx context.Context, contestID string, groups []entity.Group) error {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	fmt.Println("Creating group standings for contest", contestID)
+	countryMap, err := r.GetCountryCodeToIDMap(ctx)
+	fmt.Println(countryMap)
+	if err != nil {
+		return err
+	}
+
+	insertStmt := table.GroupStandings.INSERT(
+		table.GroupStandings.ContestID,
+		table.GroupStandings.CountryID,
+		table.GroupStandings.Letter,
+	)
+	for _, g := range groups {
+		for _, c := range g.Countries {
+			countryID, ok := countryMap[c.Code]
+			if !ok {
+				continue
+			}
+			insertStmt = insertStmt.VALUES(contestID, countryID, g.Letter)
+		}
+	}
+
+	_, err = insertStmt.ExecContext(ctx, r.db)
+	return err
+}
 
 func (r *ContestRepository) CreateSubcontest(ctx context.Context, subcontest *entity.Subcontest) error {
 	stmt := table.Subcontests.INSERT(
@@ -193,16 +224,16 @@ func (r *ContestRepository) ListSubcontests(ctx context.Context, contestID strin
 		table.SubcontestEntries.UserID.IS_NOT_NULL().AS("subcontest_result.is_member"),
 	).FROM(
 		table.Subcontests.
-			LEFT_JOIN(table.SubcontestEntries, 
+			LEFT_JOIN(table.SubcontestEntries,
 				table.SubcontestEntries.SubcontestID.EQ(table.Subcontests.ID).
-				AND(table.SubcontestEntries.UserID.EQ(postgres.UUID(parsedUserID))),
+					AND(table.SubcontestEntries.UserID.EQ(postgres.UUID(parsedUserID))),
 			),
 	).WHERE(
 		table.Subcontests.ContestID.EQ(postgres.UUID(parsedContestID)).
-		AND(
-			table.Subcontests.UserID.EQ(postgres.UUID(parsedUserID)).
-			OR(table.SubcontestEntries.UserID.IS_NOT_NULL()),
-		),
+			AND(
+				table.Subcontests.UserID.EQ(postgres.UUID(parsedUserID)).
+					OR(table.SubcontestEntries.UserID.IS_NOT_NULL()),
+			),
 	)
 
 	type SubcontestResult struct {
@@ -255,11 +286,921 @@ func (r *ContestRepository) GetSubcontestByJoinCode(ctx context.Context, joinCod
 	}, nil
 }
 
-
 func (r *ContestRepository) DeleteSubcontest(ctx context.Context, subcontestID string) error {
 	stmt := table.Subcontests.DELETE().
 		WHERE(table.Subcontests.ID.EQ(postgres.UUID(uuid.MustParse(subcontestID))))
 
 	_, err := stmt.ExecContext(ctx, r.db)
 	return err
+}
+
+type dbMatchRow struct {
+	model.Matches
+	Country1Code     *string
+	Country1FullName *string
+	Country2Code     *string
+	Country2FullName *string
+}
+
+func mapDbRowsToMatches(rows []dbMatchRow) []entity.Match {
+	matches := make([]entity.Match, 0, len(rows))
+	for _, row := range rows {
+		var c1, c2 *entity.Country
+		if row.Country1Code != nil && row.Country1FullName != nil {
+			c1 = &entity.Country{
+				Code:     *row.Country1Code,
+				FullName: *row.Country1FullName,
+			}
+		}
+		if row.Country2Code != nil && row.Country2FullName != nil {
+			c2 = &entity.Country{
+				Code:     *row.Country2Code,
+				FullName: *row.Country2FullName,
+			}
+		}
+
+		var c1g, c2g, c1p, c2p *int
+		if row.Country1Goals != nil {
+			val := int(*row.Country1Goals)
+			c1g = &val
+		}
+		if row.Country2Goals != nil {
+			val := int(*row.Country2Goals)
+			c2g = &val
+		}
+		if row.Country1Penalties != nil {
+			val := int(*row.Country1Penalties)
+			c1p = &val
+		}
+		if row.Country2Penalties != nil {
+			val := int(*row.Country2Penalties)
+			c2p = &val
+		}
+
+		var c1cs, c2cs *int
+		if row.Country1ConductScore != nil {
+			val := int(*row.Country1ConductScore)
+			c1cs = &val
+		}
+		if row.Country2ConductScore != nil {
+			val := int(*row.Country2ConductScore)
+			c2cs = &val
+		}
+
+		var roundIndex *int
+		if row.RoundIndex != nil {
+			val := int(*row.RoundIndex)
+			roundIndex = &val
+		}
+
+		matches = append(matches, entity.Match{
+			Country1:             c1,
+			Country2:             c2,
+			Country1Goals:        c1g,
+			Country2Goals:        c2g,
+			Country1Penalties:    c1p,
+			Country2Penalties:    c2p,
+			Country1ConductScore: c1cs,
+			Country2ConductScore: c2cs,
+			Round:                int(row.Round),
+			RoundIndex:           roundIndex,
+		})
+	}
+	return matches
+}
+
+func (r *ContestRepository) ListGroupMatches(ctx context.Context, contestID string, letter string) ([]entity.Match, error) {
+	parsedContestID := uuid.MustParse(contestID)
+	c1 := table.Countries.AS("country1")
+	c2 := table.Countries.AS("country2")
+
+	stmt := postgres.SELECT(
+		table.Matches.AllColumns,
+		c1.Code.AS("db_match_row.country1_code"),
+		c1.FullName.AS("db_match_row.country1_full_name"),
+		c2.Code.AS("db_match_row.country2_code"),
+		c2.FullName.AS("db_match_row.country2_full_name"),
+	).FROM(
+		table.Matches.
+			LEFT_JOIN(c1, table.Matches.Country1ID.EQ(c1.ID)).
+			LEFT_JOIN(c2, table.Matches.Country2ID.EQ(c2.ID)).
+			INNER_JOIN(table.GroupStandings, table.GroupStandings.ContestID.EQ(table.Matches.ContestID).
+				AND(table.GroupStandings.CountryID.EQ(table.Matches.Country1ID))),
+	).WHERE(
+		table.Matches.Round.EQ(postgres.Int32(0)).
+			AND(table.Matches.ContestID.EQ(postgres.UUID(parsedContestID))).
+			AND(table.GroupStandings.Letter.EQ(postgres.String(letter))),
+	)
+
+	var rows []dbMatchRow
+	if err := stmt.QueryContext(ctx, r.db, &rows); err != nil {
+		return nil, err
+	}
+
+	return mapDbRowsToMatches(rows), nil
+}
+
+func (r *ContestRepository) ListKnockoutMatches(ctx context.Context, contestID string) ([]entity.Match, error) {
+	parsedContestID := uuid.MustParse(contestID)
+	c1 := table.Countries.AS("country1")
+	c2 := table.Countries.AS("country2")
+
+	stmt := postgres.SELECT(
+		table.Matches.AllColumns,
+		c1.Code.AS("db_match_row.country1_code"),
+		c1.FullName.AS("db_match_row.country1_full_name"),
+		c2.Code.AS("db_match_row.country2_code"),
+		c2.FullName.AS("db_match_row.country2_full_name"),
+	).FROM(
+		table.Matches.
+			LEFT_JOIN(c1, table.Matches.Country1ID.EQ(c1.ID)).
+			LEFT_JOIN(c2, table.Matches.Country2ID.EQ(c2.ID)),
+	).WHERE(
+		table.Matches.Round.GT(postgres.Int32(0)).
+			AND(table.Matches.ContestID.EQ(postgres.UUID(parsedContestID))),
+	).ORDER_BY(
+		table.Matches.Round.ASC(),
+		table.Matches.RoundIndex.ASC(),
+	)
+
+	var rows []dbMatchRow
+	if err := stmt.QueryContext(ctx, r.db, &rows); err != nil {
+		return nil, err
+	}
+
+	return mapDbRowsToMatches(rows), nil
+}
+
+func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, match entity.Match) error {
+	parsedContestID := uuid.MustParse(contestID)
+
+	countryMap, err := r.GetCountryCodeToIDMap(ctx)
+	if err != nil {
+		return err
+	}
+
+	var c1ID, c2ID *uuid.UUID
+	if match.Country1 != nil {
+		if idStr, ok := countryMap[match.Country1.Code]; ok {
+			id := uuid.MustParse(idStr)
+			c1ID = &id
+		}
+	}
+	if match.Country2 != nil {
+		if idStr, ok := countryMap[match.Country2.Code]; ok {
+			id := uuid.MustParse(idStr)
+			c2ID = &id
+		}
+	}
+
+	var c1g, c2g, c1p, c2p, c1cs, c2cs *int32
+	if match.Country1Goals != nil {
+		val := int32(*match.Country1Goals)
+		c1g = &val
+	}
+	if match.Country2Goals != nil {
+		val := int32(*match.Country2Goals)
+		c2g = &val
+	}
+	if match.Country1Penalties != nil {
+		val := int32(*match.Country1Penalties)
+		c1p = &val
+	}
+	if match.Country2Penalties != nil {
+		val := int32(*match.Country2Penalties)
+		c2p = &val
+	}
+	if match.Country1ConductScore != nil {
+		val := int32(*match.Country1ConductScore)
+		c1cs = &val
+	}
+	if match.Country2ConductScore != nil {
+		val := int32(*match.Country2ConductScore)
+		c2cs = &val
+	}
+
+	var existingMatch model.Matches
+	var isKnockout bool
+
+	// 1. Find the existing match either by Round/Index or by Countries
+	if match.Round > 0 && match.RoundIndex != nil {
+		stmt := postgres.SELECT(table.Matches.AllColumns).FROM(table.Matches).WHERE(
+			table.Matches.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.Matches.Round.EQ(postgres.Int32(int32(match.Round)))).
+				AND(table.Matches.RoundIndex.EQ(postgres.Int32(int32(*match.RoundIndex)))),
+		)
+
+		if err := stmt.QueryContext(ctx, r.db, &existingMatch); err != nil {
+			return fmt.Errorf("failed to find knockout match by round/index: %w", err)
+		}
+		isKnockout = true
+	} else {
+		// Lookup by countries & round to prevent double-encounter ambiguity
+		if c1ID == nil || c2ID == nil {
+			return errors.New("match must have both countries defined to update by countries")
+		}
+
+		stmt := postgres.SELECT(table.Matches.AllColumns).FROM(table.Matches).WHERE(
+			table.Matches.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.Matches.Round.EQ(postgres.Int32(int32(match.Round)))).
+				AND(
+					(table.Matches.Country1ID.EQ(postgres.UUID(*c1ID)).AND(table.Matches.Country2ID.EQ(postgres.UUID(*c2ID)))).
+						OR(table.Matches.Country1ID.EQ(postgres.UUID(*c2ID)).AND(table.Matches.Country2ID.EQ(postgres.UUID(*c1ID)))),
+				),
+		)
+
+		if err := stmt.QueryContext(ctx, r.db, &existingMatch); err != nil {
+			return fmt.Errorf("failed to find match by countries: %w", err)
+		}
+		isKnockout = existingMatch.Round > 0
+	}
+
+	if existingMatch.Country1Goals != nil && existingMatch.Country2Goals != nil {
+		return errors.New("match has already been completed and cannot be updated again")
+	}
+
+	// 2. Modify only the provided (non-nil) fields on the existing record
+	updateModel := existingMatch
+	var hasUpdates bool
+
+	// Countries can only be updated for Knockout stage matches (Group stage pairings are static)
+	if isKnockout {
+		if c1ID != nil {
+			updateModel.Country1ID = c1ID
+			hasUpdates = true
+		}
+		if c2ID != nil {
+			updateModel.Country2ID = c2ID
+			hasUpdates = true
+		}
+	}
+
+	if match.Country1Goals != nil {
+		updateModel.Country1Goals = c1g
+		hasUpdates = true
+	}
+	if match.Country2Goals != nil {
+		updateModel.Country2Goals = c2g
+		hasUpdates = true
+	}
+	if match.Country1ConductScore != nil {
+		updateModel.Country1ConductScore = c1cs
+		hasUpdates = true
+	}
+	if match.Country2ConductScore != nil {
+		updateModel.Country2ConductScore = c2cs
+		hasUpdates = true
+	}
+
+	// Penalties are only updated for Knockout stage matches (Group stage matches can end in draws)
+	if isKnockout {
+		if match.Country1Penalties != nil {
+			updateModel.Country1Penalties = c1p
+			hasUpdates = true
+		}
+		if match.Country2Penalties != nil {
+			updateModel.Country2Penalties = c2p
+			hasUpdates = true
+		}
+	}
+
+	if !hasUpdates {
+		return nil // Nothing to update
+	}
+
+	// 3. Perform the update and side effects in a single SQL transaction to guarantee consistency
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Update the match record
+	updateStmt := table.Matches.UPDATE(
+		table.Matches.Country1ID,
+		table.Matches.Country2ID,
+		table.Matches.Country1Goals,
+		table.Matches.Country2Goals,
+		table.Matches.Country1Penalties,
+		table.Matches.Country2Penalties,
+		table.Matches.Country1ConductScore,
+		table.Matches.Country2ConductScore,
+	).
+		MODEL(updateModel).
+		WHERE(table.Matches.ID.EQ(postgres.UUID(existingMatch.ID)))
+
+	if _, err := updateStmt.ExecContext(ctx, tx); err != nil {
+		return fmt.Errorf("failed to update match: %w", err)
+	}
+
+	// If this is a group stage match and a score has been recorded/updated, update the two countries' standings
+	if !isKnockout && updateModel.Country1Goals != nil && updateModel.Country2Goals != nil {
+		if existingMatch.Country1ID == nil || existingMatch.Country2ID == nil {
+			return errors.New("cannot update standings for match with undefined countries")
+		}
+		c1ID := *existingMatch.Country1ID
+		c2ID := *existingMatch.Country2ID
+
+		var standing1, standing2 model.GroupStandings
+
+		// Fetch current standings
+		stmt1 := postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(c1ID))),
+		)
+		if err := stmt1.QueryContext(ctx, tx, &standing1); err != nil {
+			return fmt.Errorf("failed to fetch standing for country1: %w", err)
+		}
+
+		stmt2 := postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(c2ID))),
+		)
+		if err := stmt2.QueryContext(ctx, tx, &standing2); err != nil {
+			return fmt.Errorf("failed to fetch standing for country2: %w", err)
+		}
+
+		// 1. Subtract previous score contributions if a score was already recorded
+		if existingMatch.Country1Goals != nil && existingMatch.Country2Goals != nil {
+			oldG1 := *existingMatch.Country1Goals
+			oldG2 := *existingMatch.Country2Goals
+			oldCs1 := int32(0)
+			if existingMatch.Country1ConductScore != nil {
+				oldCs1 = *existingMatch.Country1ConductScore
+			}
+			oldCs2 := int32(0)
+			if existingMatch.Country2ConductScore != nil {
+				oldCs2 = *existingMatch.Country2ConductScore
+			}
+
+			// Revert Country 1 statistics
+			standing1.Gf -= oldG1
+			standing1.Ga -= oldG2
+			standing1.Gd = standing1.Gf - standing1.Ga
+			standing1.Cs -= oldCs1
+
+			// Revert Country 2 statistics
+			standing2.Gf -= oldG2
+			standing2.Ga -= oldG1
+			standing2.Gd = standing2.Gf - standing2.Ga
+			standing2.Cs -= oldCs2
+
+			// Revert wins/draws/losses/points
+			if oldG1 > oldG2 {
+				standing1.Wins--
+				standing1.Points -= 3
+				standing2.Losses--
+			} else if oldG1 == oldG2 {
+				standing1.Draws--
+				standing1.Points -= 1
+				standing2.Draws--
+				standing2.Points -= 1
+			} else {
+				standing1.Losses--
+				standing2.Wins--
+				standing2.Points -= 3
+			}
+		}
+
+		// 2. Add the new score contributions
+		newG1 := *updateModel.Country1Goals
+		newG2 := *updateModel.Country2Goals
+		newCs1 := int32(0)
+		if updateModel.Country1ConductScore != nil {
+			newCs1 = *updateModel.Country1ConductScore
+		}
+		newCs2 := int32(0)
+		if updateModel.Country2ConductScore != nil {
+			newCs2 = *updateModel.Country2ConductScore
+		}
+
+		// Apply Country 1 statistics
+		standing1.Gf += newG1
+		standing1.Ga += newG2
+		standing1.Gd = standing1.Gf - standing1.Ga
+		standing1.Cs += newCs1
+
+		// Apply Country 2 statistics
+		standing2.Gf += newG2
+		standing2.Ga += newG1
+		standing2.Gd = standing2.Gf - standing2.Ga
+		standing2.Cs += newCs2
+
+		// Apply wins/draws/losses/points
+		if newG1 > newG2 {
+			standing1.Wins++
+			standing1.Points += 3
+			standing2.Losses++
+		} else if newG1 == newG2 {
+			standing1.Draws++
+			standing1.Points += 1
+			standing2.Draws++
+			standing2.Points += 1
+		} else {
+			standing1.Losses++
+			standing2.Wins++
+			standing2.Points += 3
+		}
+
+		// 3. Persist the updated standings for both countries
+		updStandingStmt1 := table.GroupStandings.UPDATE(
+			table.GroupStandings.Wins,
+			table.GroupStandings.Draws,
+			table.GroupStandings.Losses,
+			table.GroupStandings.Gf,
+			table.GroupStandings.Ga,
+			table.GroupStandings.Gd,
+			table.GroupStandings.Points,
+			table.GroupStandings.Cs,
+		).
+			MODEL(standing1).
+			WHERE(table.GroupStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(c1ID))))
+
+		if _, err := updStandingStmt1.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("failed to update standing for country1: %w", err)
+		}
+
+		updStandingStmt2 := table.GroupStandings.UPDATE(
+			table.GroupStandings.Wins,
+			table.GroupStandings.Draws,
+			table.GroupStandings.Losses,
+			table.GroupStandings.Gf,
+			table.GroupStandings.Ga,
+			table.GroupStandings.Gd,
+			table.GroupStandings.Points,
+			table.GroupStandings.Cs,
+		).
+			MODEL(standing2).
+			WHERE(table.GroupStandings.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(c2ID))))
+
+		if _, err := updStandingStmt2.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("failed to update standing for country2: %w", err)
+		}
+	}
+
+	// If this is a knockout match and a score has been recorded, automatically advance the winner (and loser if Semifinal)
+	if isKnockout && updateModel.Country1Goals != nil && updateModel.Country2Goals != nil {
+		if updateModel.Country1ID == nil || updateModel.Country2ID == nil {
+			return errors.New("cannot progress knockout match with undefined countries")
+		}
+
+		c1ID := *updateModel.Country1ID
+		c2ID := *updateModel.Country2ID
+
+		g1 := *updateModel.Country1Goals
+		g2 := *updateModel.Country2Goals
+
+		var winnerID, loserID uuid.UUID
+		var hasWinner bool
+
+		if g1 > g2 {
+			winnerID = c1ID
+			loserID = c2ID
+			hasWinner = true
+		} else if g1 < g2 {
+			winnerID = c2ID
+			loserID = c1ID
+			hasWinner = true
+		} else {
+			// Check penalties if goals are tied
+			if updateModel.Country1Penalties != nil && updateModel.Country2Penalties != nil {
+				p1 := *updateModel.Country1Penalties
+				p2 := *updateModel.Country2Penalties
+				if p1 > p2 {
+					winnerID = c1ID
+					loserID = c2ID
+					hasWinner = true
+				} else if p1 < p2 {
+					winnerID = c2ID
+					loserID = c1ID
+					hasWinner = true
+				}
+			}
+		}
+
+		if hasWinner && existingMatch.RoundIndex != nil {
+			currentRound := int(existingMatch.Round)
+			currentRoundIndex := int(*existingMatch.RoundIndex)
+
+			// 1. Advance the winner to the next round
+			nextRound := currentRound + 1
+			nextRoundIndex := currentRoundIndex / 2
+			isCountry1Slot := (currentRoundIndex % 2) == 0
+
+			// Only progress if we haven't reached the Final/Third-Place round yet (Round 5)
+			if currentRound < 5 {
+				var targetCol postgres.Column
+				if isCountry1Slot {
+					targetCol = table.Matches.Country1ID
+				} else {
+					targetCol = table.Matches.Country2ID
+				}
+
+				updNextMatchStmt := table.Matches.UPDATE(targetCol).
+					SET(postgres.UUID(winnerID)).
+					WHERE(
+						table.Matches.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+							AND(table.Matches.Round.EQ(postgres.Int32(int32(nextRound)))).
+							AND(table.Matches.RoundIndex.EQ(postgres.Int32(int32(nextRoundIndex)))),
+					)
+
+				if _, err := updNextMatchStmt.ExecContext(ctx, tx); err != nil {
+					return fmt.Errorf("failed to seed winner into next match (Round %d, Index %d): %w", nextRound, nextRoundIndex, err)
+				}
+			}
+
+			// 2. If this is a Semifinal (Round = 4), seed the loser into the Third-Place match (Round = 5, Index = 1)
+			if currentRound == 4 {
+				thirdPlaceRound := 5
+				thirdPlaceRoundIndex := 1
+				var loserTargetCol postgres.Column
+				if currentRoundIndex == 0 {
+					loserTargetCol = table.Matches.Country1ID
+				} else {
+					loserTargetCol = table.Matches.Country2ID
+				}
+
+				updThirdMatchStmt := table.Matches.UPDATE(loserTargetCol).
+					SET(postgres.UUID(loserID)).
+					WHERE(
+						table.Matches.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+							AND(table.Matches.Round.EQ(postgres.Int32(int32(thirdPlaceRound)))).
+							AND(table.Matches.RoundIndex.EQ(postgres.Int32(int32(thirdPlaceRoundIndex)))),
+					)
+
+				if _, err := updThirdMatchStmt.ExecContext(ctx, tx); err != nil {
+					return fmt.Errorf("failed to seed loser into Third-Place match: %w", err)
+				}
+			}
+
+			// 3. Update knockout standings and increment user points immediately
+			var achievedRound int32
+			var points int32
+			switch currentRound {
+			case 1:
+				achievedRound = 2
+				points = 15
+			case 2:
+				achievedRound = 3
+				points = 20
+			case 3:
+				achievedRound = 4
+				points = 25
+			case 4:
+				achievedRound = 5
+				points = 30
+			case 5:
+				achievedRound = 6
+				if currentRoundIndex == 1 {
+					points = 5 // Third Place match winner
+				} else {
+					points = 35 // Final match winner (Champion)
+				}
+			}
+
+			if achievedRound > 0 {
+				// Seed actual winner knockout standing
+				winnerStandingsStmt := table.KnockoutStandings.INSERT(
+					table.KnockoutStandings.ContestID,
+					table.KnockoutStandings.CountryID,
+					table.KnockoutStandings.Round,
+				).VALUES(
+					postgres.UUID(existingMatch.ContestID),
+					postgres.UUID(winnerID),
+					postgres.Int32(achievedRound),
+				).ON_CONFLICT(
+					table.KnockoutStandings.ContestID,
+					table.KnockoutStandings.CountryID,
+				).DO_UPDATE(
+					postgres.SET(table.KnockoutStandings.Round.SET(postgres.Int32(achievedRound))),
+				)
+				if _, err := winnerStandingsStmt.ExecContext(ctx, tx); err != nil {
+					return fmt.Errorf("failed to upsert winner knockout standings: %w", err)
+				}
+
+				// Award points immediately to users who predicted this country to achieve this round
+				if points > 0 {
+					var pickedUsers []model.KnockoutPicks
+					findPicksStmt := postgres.SELECT(table.KnockoutPicks.UserID).
+						FROM(table.KnockoutPicks).
+						WHERE(
+							table.KnockoutPicks.ContestID.EQ(postgres.UUID(existingMatch.ContestID)).
+								AND(table.KnockoutPicks.CountryID.EQ(postgres.UUID(winnerID))).
+								AND(table.KnockoutPicks.Round.EQ(postgres.Int32(achievedRound))),
+						)
+					if err := findPicksStmt.QueryContext(ctx, tx, &pickedUsers); err != nil {
+						return fmt.Errorf("failed to query knockout picks: %w", err)
+					}
+					for _, u := range pickedUsers {
+						updStandingsStmt := table.ContestStandings.INSERT(
+							table.ContestStandings.ContestID,
+							table.ContestStandings.UserID,
+							table.ContestStandings.KnockoutScore,
+						).VALUES(
+							postgres.UUID(existingMatch.ContestID),
+							u.UserID,
+							points,
+						).ON_CONFLICT(
+							table.ContestStandings.ContestID,
+							table.ContestStandings.UserID,
+						).DO_UPDATE(
+							postgres.SET(
+								table.ContestStandings.KnockoutScore.SET(table.ContestStandings.KnockoutScore.ADD(postgres.Int32(points))),
+							),
+						)
+						if _, err := updStandingsStmt.ExecContext(ctx, tx); err != nil {
+							return fmt.Errorf("failed to update contest standings for user %s: %w", u.UserID.String(), err)
+						}
+					}
+				}
+			}
+
+			// If Semifinal (Round = 4), the loser also reaches Round 5 (Third-Place Match participant)
+			if currentRound == 4 {
+				loserStandingsStmt := table.KnockoutStandings.INSERT(
+					table.KnockoutStandings.ContestID,
+					table.KnockoutStandings.CountryID,
+					table.KnockoutStandings.Round,
+				).VALUES(
+					postgres.UUID(existingMatch.ContestID),
+					postgres.UUID(loserID),
+					postgres.Int32(5),
+				).ON_CONFLICT(
+					table.KnockoutStandings.ContestID,
+					table.KnockoutStandings.CountryID,
+				).DO_UPDATE(
+					postgres.SET(table.KnockoutStandings.Round.SET(postgres.Int32(5))),
+				)
+				if _, err := loserStandingsStmt.ExecContext(ctx, tx); err != nil {
+					return fmt.Errorf("failed to upsert Semifinal loser knockout standings: %w", err)
+				}
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (r *ContestRepository) FinalizeGroupRankings(ctx context.Context, contestID string, groupLetter string, orderedCountryCodes []string) error {
+	parsedContestID := uuid.MustParse(contestID)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Verify that all group matches are completed (no nil goals).
+	type incompleteCountResult struct {
+		Count int64
+	}
+	var incompleteCount incompleteCountResult
+	chkStmt := postgres.SELECT(postgres.COUNT(table.Matches.ID).AS("incomplete_count_result.count")).
+		FROM(
+			table.Matches.
+				INNER_JOIN(table.GroupStandings, table.GroupStandings.ContestID.EQ(table.Matches.ContestID).
+					AND(table.GroupStandings.CountryID.EQ(table.Matches.Country1ID))),
+		).
+		WHERE(
+			table.Matches.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.Matches.Round.EQ(postgres.Int32(0))).
+				AND(table.GroupStandings.Letter.EQ(postgres.String(groupLetter))).
+				AND(table.Matches.Country1Goals.IS_NULL().OR(table.Matches.Country2Goals.IS_NULL())),
+		)
+	if err := chkStmt.QueryContext(ctx, tx, &incompleteCount); err != nil {
+		return fmt.Errorf("failed to check for incomplete group matches: %w", err)
+	}
+	if incompleteCount.Count > 0 {
+		return fmt.Errorf("cannot finalize standings: there are %d incomplete group matches", incompleteCount.Count)
+	}
+
+	// 2. Verify that group has not already been finalized.
+	type finalizedCountResult struct {
+		Count int64
+	}
+	var finalizedCount finalizedCountResult
+	finalizedStmt := postgres.SELECT(postgres.COUNT(table.GroupStandings.CountryID).AS("finalized_count_result.count")).
+		FROM(table.GroupStandings).
+		WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupStandings.Letter.EQ(postgres.String(groupLetter))).
+				AND(table.GroupStandings.Rank.IS_NOT_NULL()),
+		)
+	if err := finalizedStmt.QueryContext(ctx, tx, &finalizedCount); err != nil {
+		return fmt.Errorf("failed to check for existing finalization: %w", err)
+	}
+	if finalizedCount.Count > 0 {
+		return fmt.Errorf("group %s standings have already been finalized and cannot be updated again", groupLetter)
+	}
+
+	// 3. Map country codes to UUIDs.
+	countryMap, err := r.GetCountryCodeToIDMap(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load country map: %w", err)
+	}
+
+	// 4. Update the rank of each country.
+	rankMap := make(map[uuid.UUID]int32)
+	for idx, code := range orderedCountryCodes {
+		idStr, ok := countryMap[code]
+		if !ok {
+			return fmt.Errorf("invalid country code: %s", code)
+		}
+		countryID := uuid.MustParse(idStr)
+		rank := int32(idx + 1)
+		rankMap[countryID] = rank
+
+		updStmt := table.GroupStandings.UPDATE(table.GroupStandings.Rank).
+			SET(table.GroupStandings.Rank.SET(postgres.Int32(rank))).
+			WHERE(
+				table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+					AND(table.GroupStandings.CountryID.EQ(postgres.UUID(countryID))),
+			)
+		if _, err := updStmt.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("failed to update rank for %s: %w", code, err)
+		}
+	}
+
+	// 5. Query user predictions for this group.
+	var picks []model.GroupPicks
+	picksStmt := postgres.SELECT(
+		table.GroupPicks.UserID,
+		table.GroupPicks.CountryID,
+		table.GroupPicks.Place,
+	).FROM(table.GroupPicks).
+		WHERE(
+			table.GroupPicks.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupPicks.Letter.EQ(postgres.String(groupLetter))),
+		)
+	if err := picksStmt.QueryContext(ctx, tx, &picks); err != nil {
+		return fmt.Errorf("failed to fetch user group picks: %w", err)
+	}
+
+	// 6. Calculate points and update contest standings.
+	userPoints := make(map[uuid.UUID]int32)
+	for _, p := range picks {
+		actualRank, exists := rankMap[p.CountryID]
+		if !exists {
+			continue
+		}
+
+		var multiplier int32
+		switch p.Place {
+		case 1:
+			multiplier = 3
+		case 2:
+			multiplier = 2
+		case 3:
+			multiplier = 1
+		case 4:
+			multiplier = 0
+		}
+
+		var basePoints int32
+		switch actualRank {
+		case 1:
+			basePoints = 10
+		case 2:
+			basePoints = 6
+		case 3:
+			basePoints = 3
+		case 4:
+			basePoints = 1
+		}
+
+		points := basePoints * multiplier
+		userPoints[p.UserID] += points
+	}
+
+	for uID, pts := range userPoints {
+		updStandings := table.ContestStandings.INSERT(
+			table.ContestStandings.ContestID,
+			table.ContestStandings.UserID,
+			table.ContestStandings.GroupScore,
+		).VALUES(
+			parsedContestID,
+			uID,
+			pts,
+		).ON_CONFLICT(
+			table.ContestStandings.ContestID,
+			table.ContestStandings.UserID,
+		).DO_UPDATE(
+			postgres.SET(
+				table.ContestStandings.GroupScore.SET(table.ContestStandings.GroupScore.ADD(postgres.Int32(pts))),
+			),
+		)
+		if _, err := updStandings.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("failed to increment user group score: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (r *ContestRepository) FinalizeThirdPlaceQualifier(ctx context.Context, contestID string, groupLetter string, isWildcardQualifier bool) error {
+	parsedContestID := uuid.MustParse(contestID)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Find the 3rd-place team in the group standings.
+	type thirdPlaceTeamResult struct {
+		CountryID uuid.UUID `sql:"primary_key"`
+	}
+	var thirdPlaceTeam thirdPlaceTeamResult
+	tpStmt := postgres.SELECT(table.GroupStandings.CountryID.AS("third_place_team_result.country_id")).
+		FROM(table.GroupStandings).
+		WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupStandings.Letter.EQ(postgres.String(groupLetter))).
+				AND(table.GroupStandings.Rank.EQ(postgres.Int32(3))),
+		)
+	if err := tpStmt.QueryContext(ctx, tx, &thirdPlaceTeam); err != nil {
+		return fmt.Errorf("failed to find third-place team: group rankings might not be finalized yet: %w", err)
+	}
+
+	// 2. Check if third-place qualifier is already finalized.
+	var existingQual model.GroupStandings
+	checkStmt := postgres.SELECT(table.GroupStandings.IsThirdPlaceQualifier).
+		FROM(table.GroupStandings).
+		WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(thirdPlaceTeam.CountryID))),
+		)
+	if err := checkStmt.QueryContext(ctx, tx, &existingQual); err != nil {
+		return fmt.Errorf("failed to check existing qualifier: %w", err)
+	}
+	if existingQual.IsThirdPlaceQualifier != nil {
+		return fmt.Errorf("third-place qualifier for group %s has already been finalized and cannot be updated again", groupLetter)
+	}
+
+	// 3. Update third-place qualifier status.
+	updStmt := table.GroupStandings.UPDATE(table.GroupStandings.IsThirdPlaceQualifier).
+		SET(table.GroupStandings.IsThirdPlaceQualifier.SET(postgres.Bool(isWildcardQualifier))).
+		WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(thirdPlaceTeam.CountryID))),
+		)
+	if _, err := updStmt.ExecContext(ctx, tx); err != nil {
+		return fmt.Errorf("failed to update third-place qualifier status: %w", err)
+	}
+
+	// 4. Query user predictions (extra_qualifier) for this group.
+	var picks []model.GroupPicks
+	picksStmt := postgres.SELECT(
+		table.GroupPicks.UserID,
+		table.GroupPicks.ExtraQualifier,
+	).DISTINCT(table.GroupPicks.UserID, table.GroupPicks.ExtraQualifier).
+		FROM(table.GroupPicks).
+		WHERE(
+			table.GroupPicks.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupPicks.Letter.EQ(postgres.String(groupLetter))),
+		)
+	if err := picksStmt.QueryContext(ctx, tx, &picks); err != nil {
+		return fmt.Errorf("failed to fetch user group qualifier picks: %w", err)
+	}
+
+	// 5. Award 5 points if they correctly predicted the boolean advancement.
+	for _, p := range picks {
+		if p.ExtraQualifier == isWildcardQualifier {
+			updStandings := table.ContestStandings.INSERT(
+				table.ContestStandings.ContestID,
+				table.ContestStandings.UserID,
+				table.ContestStandings.GroupScore,
+			).VALUES(
+				parsedContestID,
+				p.UserID,
+				int32(5),
+			).ON_CONFLICT(
+				table.ContestStandings.ContestID,
+				table.ContestStandings.UserID,
+			).DO_UPDATE(
+				postgres.SET(
+					table.ContestStandings.GroupScore.SET(table.ContestStandings.GroupScore.ADD(postgres.Int32(5))),
+				),
+			)
+			if _, err := updStandings.ExecContext(ctx, tx); err != nil {
+				return fmt.Errorf("failed to award bonus points: %w", err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

@@ -12,8 +12,10 @@ import (
 )
 
 type GroupPicks struct {
-	UserID    uuid.UUID `sql:"primary_key"`
-	ContestID uuid.UUID `sql:"primary_key"`
-	CountryID uuid.UUID `sql:"primary_key"`
-	Place     int32
+	UserID         uuid.UUID `sql:"primary_key"`
+	ContestID      uuid.UUID `sql:"primary_key"`
+	CountryID      uuid.UUID `sql:"primary_key"`
+	Letter         string
+	Place          int32
+	ExtraQualifier bool
 }
