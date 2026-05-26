@@ -469,3 +469,163 @@ export class JoinSubcontestResponse extends Message<JoinSubcontestResponse> {
   }
 }
 
+/**
+ * @generated from message api.v1.FinalizeGroupRankingsRequest
+ */
+export class FinalizeGroupRankingsRequest extends Message<FinalizeGroupRankingsRequest> {
+  /**
+   * @generated from field: string contest_slug = 1;
+   */
+  contestSlug = "";
+
+  /**
+   * @generated from field: string group_letter = 2;
+   */
+  groupLetter = "";
+
+  /**
+   * @generated from field: repeated string ordered_country_codes = 3;
+   */
+  orderedCountryCodes: string[] = [];
+
+  constructor(data?: PartialMessage<FinalizeGroupRankingsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.FinalizeGroupRankingsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "group_letter", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "ordered_country_codes", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinalizeGroupRankingsRequest {
+    return new FinalizeGroupRankingsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FinalizeGroupRankingsRequest {
+    return new FinalizeGroupRankingsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FinalizeGroupRankingsRequest {
+    return new FinalizeGroupRankingsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FinalizeGroupRankingsRequest | PlainMessage<FinalizeGroupRankingsRequest> | undefined, b: FinalizeGroupRankingsRequest | PlainMessage<FinalizeGroupRankingsRequest> | undefined): boolean {
+    return proto3.util.equals(FinalizeGroupRankingsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message api.v1.FinalizeGroupRankingsResponse
+ */
+export class FinalizeGroupRankingsResponse extends Message<FinalizeGroupRankingsResponse> {
+  constructor(data?: PartialMessage<FinalizeGroupRankingsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.FinalizeGroupRankingsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinalizeGroupRankingsResponse {
+    return new FinalizeGroupRankingsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FinalizeGroupRankingsResponse {
+    return new FinalizeGroupRankingsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FinalizeGroupRankingsResponse {
+    return new FinalizeGroupRankingsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FinalizeGroupRankingsResponse | PlainMessage<FinalizeGroupRankingsResponse> | undefined, b: FinalizeGroupRankingsResponse | PlainMessage<FinalizeGroupRankingsResponse> | undefined): boolean {
+    return proto3.util.equals(FinalizeGroupRankingsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message api.v1.FinalizeThirdPlaceQualifierRequest
+ */
+export class FinalizeThirdPlaceQualifierRequest extends Message<FinalizeThirdPlaceQualifierRequest> {
+  /**
+   * @generated from field: string contest_slug = 1;
+   */
+  contestSlug = "";
+
+  /**
+   * @generated from field: string group_letter = 2;
+   */
+  groupLetter = "";
+
+  /**
+   * @generated from field: bool is_wildcard_qualifier = 3;
+   */
+  isWildcardQualifier = false;
+
+  constructor(data?: PartialMessage<FinalizeThirdPlaceQualifierRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.FinalizeThirdPlaceQualifierRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "contest_slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "group_letter", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "is_wildcard_qualifier", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinalizeThirdPlaceQualifierRequest {
+    return new FinalizeThirdPlaceQualifierRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FinalizeThirdPlaceQualifierRequest {
+    return new FinalizeThirdPlaceQualifierRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FinalizeThirdPlaceQualifierRequest {
+    return new FinalizeThirdPlaceQualifierRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FinalizeThirdPlaceQualifierRequest | PlainMessage<FinalizeThirdPlaceQualifierRequest> | undefined, b: FinalizeThirdPlaceQualifierRequest | PlainMessage<FinalizeThirdPlaceQualifierRequest> | undefined): boolean {
+    return proto3.util.equals(FinalizeThirdPlaceQualifierRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message api.v1.FinalizeThirdPlaceQualifierResponse
+ */
+export class FinalizeThirdPlaceQualifierResponse extends Message<FinalizeThirdPlaceQualifierResponse> {
+  constructor(data?: PartialMessage<FinalizeThirdPlaceQualifierResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "api.v1.FinalizeThirdPlaceQualifierResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FinalizeThirdPlaceQualifierResponse {
+    return new FinalizeThirdPlaceQualifierResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FinalizeThirdPlaceQualifierResponse {
+    return new FinalizeThirdPlaceQualifierResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FinalizeThirdPlaceQualifierResponse {
+    return new FinalizeThirdPlaceQualifierResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FinalizeThirdPlaceQualifierResponse | PlainMessage<FinalizeThirdPlaceQualifierResponse> | undefined, b: FinalizeThirdPlaceQualifierResponse | PlainMessage<FinalizeThirdPlaceQualifierResponse> | undefined): boolean {
+    return proto3.util.equals(FinalizeThirdPlaceQualifierResponse, a, b);
+  }
+}
+

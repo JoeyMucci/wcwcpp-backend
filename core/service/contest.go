@@ -167,3 +167,27 @@ func (s *ContestService) JoinSubcontest(ctx context.Context, userID string, join
 
 	return s.repo.JoinSubcontest(ctx, sub.ID, userID)
 }
+
+func (s *ContestService) FinalizeGroupRankings(ctx context.Context, contestSlug string, groupLetter string, orderedCountryCodes []string) error {
+	contest, err := s.repo.GetContestBySlug(ctx, contestSlug)
+	if err != nil {
+		return err
+	}
+	if contest == nil {
+		return errors.New("contest not found")
+	}
+
+	return s.repo.FinalizeGroupRankings(ctx, contest.ID, groupLetter, orderedCountryCodes)
+}
+
+func (s *ContestService) FinalizeThirdPlaceQualifier(ctx context.Context, contestSlug string, groupLetter string, isWildcardQualifier bool) error {
+	contest, err := s.repo.GetContestBySlug(ctx, contestSlug)
+	if err != nil {
+		return err
+	}
+	if contest == nil {
+		return errors.New("contest not found")
+	}
+
+	return s.repo.FinalizeThirdPlaceQualifier(ctx, contest.ID, groupLetter, isWildcardQualifier)
+}

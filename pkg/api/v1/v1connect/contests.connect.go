@@ -51,17 +51,25 @@ const (
 	// ContestServiceJoinSubcontestProcedure is the fully-qualified name of the ContestService's
 	// JoinSubcontest RPC.
 	ContestServiceJoinSubcontestProcedure = "/api.v1.ContestService/JoinSubcontest"
+	// ContestServiceFinalizeGroupRankingsProcedure is the fully-qualified name of the ContestService's
+	// FinalizeGroupRankings RPC.
+	ContestServiceFinalizeGroupRankingsProcedure = "/api.v1.ContestService/FinalizeGroupRankings"
+	// ContestServiceFinalizeThirdPlaceQualifierProcedure is the fully-qualified name of the
+	// ContestService's FinalizeThirdPlaceQualifier RPC.
+	ContestServiceFinalizeThirdPlaceQualifierProcedure = "/api.v1.ContestService/FinalizeThirdPlaceQualifier"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	contestServiceServiceDescriptor                = v1.File_api_v1_contests_proto.Services().ByName("ContestService")
-	contestServiceListContestsMethodDescriptor     = contestServiceServiceDescriptor.Methods().ByName("ListContests")
-	contestServiceCreateContestMethodDescriptor    = contestServiceServiceDescriptor.Methods().ByName("CreateContest")
-	contestServiceListSubcontestsMethodDescriptor  = contestServiceServiceDescriptor.Methods().ByName("ListSubcontests")
-	contestServiceCreateSubcontestMethodDescriptor = contestServiceServiceDescriptor.Methods().ByName("CreateSubcontest")
-	contestServiceDeleteSubcontestMethodDescriptor = contestServiceServiceDescriptor.Methods().ByName("DeleteSubcontest")
-	contestServiceJoinSubcontestMethodDescriptor   = contestServiceServiceDescriptor.Methods().ByName("JoinSubcontest")
+	contestServiceServiceDescriptor                           = v1.File_api_v1_contests_proto.Services().ByName("ContestService")
+	contestServiceListContestsMethodDescriptor                = contestServiceServiceDescriptor.Methods().ByName("ListContests")
+	contestServiceCreateContestMethodDescriptor               = contestServiceServiceDescriptor.Methods().ByName("CreateContest")
+	contestServiceListSubcontestsMethodDescriptor             = contestServiceServiceDescriptor.Methods().ByName("ListSubcontests")
+	contestServiceCreateSubcontestMethodDescriptor            = contestServiceServiceDescriptor.Methods().ByName("CreateSubcontest")
+	contestServiceDeleteSubcontestMethodDescriptor            = contestServiceServiceDescriptor.Methods().ByName("DeleteSubcontest")
+	contestServiceJoinSubcontestMethodDescriptor              = contestServiceServiceDescriptor.Methods().ByName("JoinSubcontest")
+	contestServiceFinalizeGroupRankingsMethodDescriptor       = contestServiceServiceDescriptor.Methods().ByName("FinalizeGroupRankings")
+	contestServiceFinalizeThirdPlaceQualifierMethodDescriptor = contestServiceServiceDescriptor.Methods().ByName("FinalizeThirdPlaceQualifier")
 )
 
 // ContestServiceClient is a client for the api.v1.ContestService service.
@@ -72,6 +80,8 @@ type ContestServiceClient interface {
 	CreateSubcontest(context.Context, *connect.Request[v1.CreateSubcontestRequest]) (*connect.Response[v1.CreateSubcontestResponse], error)
 	DeleteSubcontest(context.Context, *connect.Request[v1.DeleteSubcontestRequest]) (*connect.Response[v1.DeleteSubcontestResponse], error)
 	JoinSubcontest(context.Context, *connect.Request[v1.JoinSubcontestRequest]) (*connect.Response[v1.JoinSubcontestResponse], error)
+	FinalizeGroupRankings(context.Context, *connect.Request[v1.FinalizeGroupRankingsRequest]) (*connect.Response[v1.FinalizeGroupRankingsResponse], error)
+	FinalizeThirdPlaceQualifier(context.Context, *connect.Request[v1.FinalizeThirdPlaceQualifierRequest]) (*connect.Response[v1.FinalizeThirdPlaceQualifierResponse], error)
 }
 
 // NewContestServiceClient constructs a client for the api.v1.ContestService service. By default, it
@@ -120,17 +130,31 @@ func NewContestServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(contestServiceJoinSubcontestMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		finalizeGroupRankings: connect.NewClient[v1.FinalizeGroupRankingsRequest, v1.FinalizeGroupRankingsResponse](
+			httpClient,
+			baseURL+ContestServiceFinalizeGroupRankingsProcedure,
+			connect.WithSchema(contestServiceFinalizeGroupRankingsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		finalizeThirdPlaceQualifier: connect.NewClient[v1.FinalizeThirdPlaceQualifierRequest, v1.FinalizeThirdPlaceQualifierResponse](
+			httpClient,
+			baseURL+ContestServiceFinalizeThirdPlaceQualifierProcedure,
+			connect.WithSchema(contestServiceFinalizeThirdPlaceQualifierMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // contestServiceClient implements ContestServiceClient.
 type contestServiceClient struct {
-	listContests     *connect.Client[v1.ListContestsRequest, v1.ListContestsResponse]
-	createContest    *connect.Client[v1.CreateContestRequest, v1.CreateContestResponse]
-	listSubcontests  *connect.Client[v1.ListSubcontestsRequest, v1.ListSubcontestsResponse]
-	createSubcontest *connect.Client[v1.CreateSubcontestRequest, v1.CreateSubcontestResponse]
-	deleteSubcontest *connect.Client[v1.DeleteSubcontestRequest, v1.DeleteSubcontestResponse]
-	joinSubcontest   *connect.Client[v1.JoinSubcontestRequest, v1.JoinSubcontestResponse]
+	listContests                *connect.Client[v1.ListContestsRequest, v1.ListContestsResponse]
+	createContest               *connect.Client[v1.CreateContestRequest, v1.CreateContestResponse]
+	listSubcontests             *connect.Client[v1.ListSubcontestsRequest, v1.ListSubcontestsResponse]
+	createSubcontest            *connect.Client[v1.CreateSubcontestRequest, v1.CreateSubcontestResponse]
+	deleteSubcontest            *connect.Client[v1.DeleteSubcontestRequest, v1.DeleteSubcontestResponse]
+	joinSubcontest              *connect.Client[v1.JoinSubcontestRequest, v1.JoinSubcontestResponse]
+	finalizeGroupRankings       *connect.Client[v1.FinalizeGroupRankingsRequest, v1.FinalizeGroupRankingsResponse]
+	finalizeThirdPlaceQualifier *connect.Client[v1.FinalizeThirdPlaceQualifierRequest, v1.FinalizeThirdPlaceQualifierResponse]
 }
 
 // ListContests calls api.v1.ContestService.ListContests.
@@ -163,6 +187,16 @@ func (c *contestServiceClient) JoinSubcontest(ctx context.Context, req *connect.
 	return c.joinSubcontest.CallUnary(ctx, req)
 }
 
+// FinalizeGroupRankings calls api.v1.ContestService.FinalizeGroupRankings.
+func (c *contestServiceClient) FinalizeGroupRankings(ctx context.Context, req *connect.Request[v1.FinalizeGroupRankingsRequest]) (*connect.Response[v1.FinalizeGroupRankingsResponse], error) {
+	return c.finalizeGroupRankings.CallUnary(ctx, req)
+}
+
+// FinalizeThirdPlaceQualifier calls api.v1.ContestService.FinalizeThirdPlaceQualifier.
+func (c *contestServiceClient) FinalizeThirdPlaceQualifier(ctx context.Context, req *connect.Request[v1.FinalizeThirdPlaceQualifierRequest]) (*connect.Response[v1.FinalizeThirdPlaceQualifierResponse], error) {
+	return c.finalizeThirdPlaceQualifier.CallUnary(ctx, req)
+}
+
 // ContestServiceHandler is an implementation of the api.v1.ContestService service.
 type ContestServiceHandler interface {
 	ListContests(context.Context, *connect.Request[v1.ListContestsRequest]) (*connect.Response[v1.ListContestsResponse], error)
@@ -171,6 +205,8 @@ type ContestServiceHandler interface {
 	CreateSubcontest(context.Context, *connect.Request[v1.CreateSubcontestRequest]) (*connect.Response[v1.CreateSubcontestResponse], error)
 	DeleteSubcontest(context.Context, *connect.Request[v1.DeleteSubcontestRequest]) (*connect.Response[v1.DeleteSubcontestResponse], error)
 	JoinSubcontest(context.Context, *connect.Request[v1.JoinSubcontestRequest]) (*connect.Response[v1.JoinSubcontestResponse], error)
+	FinalizeGroupRankings(context.Context, *connect.Request[v1.FinalizeGroupRankingsRequest]) (*connect.Response[v1.FinalizeGroupRankingsResponse], error)
+	FinalizeThirdPlaceQualifier(context.Context, *connect.Request[v1.FinalizeThirdPlaceQualifierRequest]) (*connect.Response[v1.FinalizeThirdPlaceQualifierResponse], error)
 }
 
 // NewContestServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -215,6 +251,18 @@ func NewContestServiceHandler(svc ContestServiceHandler, opts ...connect.Handler
 		connect.WithSchema(contestServiceJoinSubcontestMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	contestServiceFinalizeGroupRankingsHandler := connect.NewUnaryHandler(
+		ContestServiceFinalizeGroupRankingsProcedure,
+		svc.FinalizeGroupRankings,
+		connect.WithSchema(contestServiceFinalizeGroupRankingsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	contestServiceFinalizeThirdPlaceQualifierHandler := connect.NewUnaryHandler(
+		ContestServiceFinalizeThirdPlaceQualifierProcedure,
+		svc.FinalizeThirdPlaceQualifier,
+		connect.WithSchema(contestServiceFinalizeThirdPlaceQualifierMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/api.v1.ContestService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ContestServiceListContestsProcedure:
@@ -229,6 +277,10 @@ func NewContestServiceHandler(svc ContestServiceHandler, opts ...connect.Handler
 			contestServiceDeleteSubcontestHandler.ServeHTTP(w, r)
 		case ContestServiceJoinSubcontestProcedure:
 			contestServiceJoinSubcontestHandler.ServeHTTP(w, r)
+		case ContestServiceFinalizeGroupRankingsProcedure:
+			contestServiceFinalizeGroupRankingsHandler.ServeHTTP(w, r)
+		case ContestServiceFinalizeThirdPlaceQualifierProcedure:
+			contestServiceFinalizeThirdPlaceQualifierHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -260,4 +312,12 @@ func (UnimplementedContestServiceHandler) DeleteSubcontest(context.Context, *con
 
 func (UnimplementedContestServiceHandler) JoinSubcontest(context.Context, *connect.Request[v1.JoinSubcontestRequest]) (*connect.Response[v1.JoinSubcontestResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.ContestService.JoinSubcontest is not implemented"))
+}
+
+func (UnimplementedContestServiceHandler) FinalizeGroupRankings(context.Context, *connect.Request[v1.FinalizeGroupRankingsRequest]) (*connect.Response[v1.FinalizeGroupRankingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.ContestService.FinalizeGroupRankings is not implemented"))
+}
+
+func (UnimplementedContestServiceHandler) FinalizeThirdPlaceQualifier(context.Context, *connect.Request[v1.FinalizeThirdPlaceQualifierRequest]) (*connect.Response[v1.FinalizeThirdPlaceQualifierResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.ContestService.FinalizeThirdPlaceQualifier is not implemented"))
 }

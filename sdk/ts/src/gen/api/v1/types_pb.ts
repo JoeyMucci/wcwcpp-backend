@@ -256,6 +256,11 @@ export class RankedCountry extends Message<RankedCountry> {
    */
   conductScore = protoInt64.zero;
 
+  /**
+   * @generated from field: bool is_third_place_qualifier = 11;
+   */
+  isThirdPlaceQualifier = false;
+
   constructor(data?: PartialMessage<RankedCountry>) {
     super();
     proto3.util.initPartial(data, this);
@@ -274,6 +279,7 @@ export class RankedCountry extends Message<RankedCountry> {
     { no: 8, name: "goals_against", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 9, name: "goal_difference", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 10, name: "conduct_score", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 11, name: "is_third_place_qualifier", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RankedCountry {

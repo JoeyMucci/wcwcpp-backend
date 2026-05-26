@@ -193,3 +193,37 @@ func (h *ContestHandler) JoinSubcontest(ctx context.Context, req *connect.Reques
 	}
 	return interceptor.WithAuth(handlerFunc)(ctx, req)
 }
+
+func (h *ContestHandler) FinalizeGroupRankings(ctx context.Context, req *connect.Request[v1.FinalizeGroupRankingsRequest]) (*connect.Response[v1.FinalizeGroupRankingsResponse], error) {
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.FinalizeGroupRankingsRequest]) (*connect.Response[v1.FinalizeGroupRankingsResponse], error) {
+		err := h.svc.FinalizeGroupRankings(ctx, req.Msg.ContestSlug, req.Msg.GroupLetter, req.Msg.OrderedCountryCodes)
+		if err != nil {
+			if strings.Contains(err.Error(), "incomplete group matches") || strings.Contains(err.Error(), "already been finalized") {
+				return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+			}
+			if err.Error() == "contest not found" {
+				return nil, connect.NewError(connect.CodeNotFound, err)
+			}
+			return nil, err
+		}
+		return connect.NewResponse(&v1.FinalizeGroupRankingsResponse{}), nil
+	}
+	return interceptor.WithSuperadmin(handlerFunc)(ctx, req)
+}
+
+func (h *ContestHandler) FinalizeThirdPlaceQualifier(ctx context.Context, req *connect.Request[v1.FinalizeThirdPlaceQualifierRequest]) (*connect.Response[v1.FinalizeThirdPlaceQualifierResponse], error) {
+	handlerFunc := func(ctx context.Context, req *connect.Request[v1.FinalizeThirdPlaceQualifierRequest]) (*connect.Response[v1.FinalizeThirdPlaceQualifierResponse], error) {
+		err := h.svc.FinalizeThirdPlaceQualifier(ctx, req.Msg.ContestSlug, req.Msg.GroupLetter, req.Msg.IsWildcardQualifier)
+		if err != nil {
+			if strings.Contains(err.Error(), "already been finalized") || strings.Contains(err.Error(), "rankings might not be finalized") {
+				return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+			}
+			if err.Error() == "contest not found" {
+				return nil, connect.NewError(connect.CodeNotFound, err)
+			}
+			return nil, err
+		}
+		return connect.NewResponse(&v1.FinalizeThirdPlaceQualifierResponse{}), nil
+	}
+	return interceptor.WithSuperadmin(handlerFunc)(ctx, req)
+}

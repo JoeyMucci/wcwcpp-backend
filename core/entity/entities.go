@@ -60,16 +60,18 @@ type KnockoutPick struct {
 }
 
 type GroupStanding struct {
-	Country        Country
-	Letter         string
-	Points         int64
-	Wins           int64
-	Draws          int64
-	Losses         int64
-	GoalsFor       int64
-	GoalsAgainst   int64
-	GoalDifference int64
-	ConductScore   int64
+	Country               Country
+	Letter                string
+	Points                int64
+	Wins                  int64
+	Draws                 int64
+	Losses                int64
+	GoalsFor              int64
+	GoalsAgainst          int64
+	GoalDifference        int64
+	ConductScore          int64
+	Rank                  *int32
+	IsThirdPlaceQualifier *bool
 }
 
 type LeaderboardEntry struct {

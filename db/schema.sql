@@ -71,6 +71,8 @@ CREATE TABLE group_standings (
     ga INT NOT NULL DEFAULT 0,
     gd INT NOT NULL DEFAULT 0,
     cs INT NOT NULL DEFAULT 0,
+    rank INT,
+    is_third_place_qualifier BOOLEAN,
     PRIMARY KEY (contest_id, country_id)
 );
 
@@ -87,6 +89,7 @@ CREATE TABLE group_picks (
     country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
     letter VARCHAR(1) NOT NULL,
     place INT NOT NULL,
+    extra_qualifier BOOLEAN NOT NULL DEFAULT FALSE,
     PRIMARY KEY (user_id, contest_id, country_id)
 );
 

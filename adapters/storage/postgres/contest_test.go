@@ -848,3 +848,171 @@ func TestContestRepository_MatchOperations(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "match has already been completed and cannot be updated again")
 }
+
+func TestContestRepository_FinalizeGroupStandings(t *testing.T) {
+	repo := NewContestRepository(setupTestDB(t))
+	ctx := context.Background()
+
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	uniqueSuffix := uuid.New().String()
+
+	// 1. Create Contest
+	contest := &entity.Contest{
+		Title:              "Finalize Contest " + uniqueSuffix,
+		Slug:               "finalize-contest-" + uniqueSuffix,
+		GroupUnlockDate:    now,
+		GroupLockDate:      now.Add(time.Hour),
+		KnockoutUnlockDate: now.Add(24 * time.Hour),
+		KnockoutLockDate:   now.Add(48 * time.Hour),
+	}
+	err := repo.CreateContest(ctx, contest)
+	require.NoError(t, err)
+
+	// 2. Setup countries (USA, MEX, CAN, ARG)
+	cCodes := []string{"USA", "MEX", "CAN", "ARG"}
+	var countries []entity.Country
+	for _, code := range cCodes {
+		countries = append(countries, entity.Country{Code: code, FullName: "Team " + code})
+	}
+	err = repo.CreateCountries(ctx, countries)
+	require.NoError(t, err)
+
+	// 3. Seed group standings for Group A
+	groups := []entity.Group{
+		{
+			Letter:    "A",
+			Countries: countries,
+		},
+	}
+	err = repo.CreateGroupStandings(ctx, contest.ID, groups)
+	require.NoError(t, err)
+
+	// Fetch database generated country IDs
+	var dbUSA, dbMEX, dbCAN, dbARG model.Countries
+	err = postgres.SELECT(table.Countries.AllColumns).FROM(table.Countries).WHERE(table.Countries.Code.EQ(postgres.String("USA"))).QueryContext(ctx, repo.db, &dbUSA)
+	require.NoError(t, err)
+	err = postgres.SELECT(table.Countries.AllColumns).FROM(table.Countries).WHERE(table.Countries.Code.EQ(postgres.String("MEX"))).QueryContext(ctx, repo.db, &dbMEX)
+	require.NoError(t, err)
+	err = postgres.SELECT(table.Countries.AllColumns).FROM(table.Countries).WHERE(table.Countries.Code.EQ(postgres.String("CAN"))).QueryContext(ctx, repo.db, &dbCAN)
+	require.NoError(t, err)
+	err = postgres.SELECT(table.Countries.AllColumns).FROM(table.Countries).WHERE(table.Countries.Code.EQ(postgres.String("ARG"))).QueryContext(ctx, repo.db, &dbARG)
+	require.NoError(t, err)
+
+	// Create test user and contest standing
+	userID := uuid.New().String()
+	_, err = repo.db.ExecContext(ctx, "INSERT INTO users (id, email, username) VALUES ($1, $2, $3)",
+		userID, userID+"@example.com", "scorer-"+userID[:6])
+	require.NoError(t, err)
+
+	_, err = repo.db.ExecContext(ctx, "INSERT INTO contest_standings (contest_id, user_id, group_score, knockout_score) VALUES ($1, $2, $3, $4)",
+		contest.ID, userID, 0, 0)
+	require.NoError(t, err)
+
+	// Create predictions for user:
+	// USA predicted place = 1 (Actual rank = 1) -> 10 * 3 = 30 pts
+	// MEX predicted place = 2 (Actual rank = 2) -> 6 * 2 = 12 pts
+	// CAN predicted place = 3 (Actual rank = 3) -> 3 * 1 = 3 pts
+	// ARG predicted place = 4 (Actual rank = 4) -> 1 * 0 = 0 pts
+	// Total expected = 30 + 12 + 3 + 0 = 45 points!
+	// And extra_qualifier = true (User predicts USA 3rd place advances as wildcard).
+	_, err = repo.db.ExecContext(ctx, `
+		INSERT INTO group_picks (user_id, contest_id, country_id, letter, place, extra_qualifier) VALUES 
+		($1, $2, $3, 'A', 1, true),
+		($1, $2, $4, 'A', 2, true),
+		($1, $2, $5, 'A', 3, true),
+		($1, $2, $6, 'A', 4, true)`,
+		userID, contest.ID, dbUSA.ID, dbMEX.ID, dbCAN.ID, dbARG.ID)
+	require.NoError(t, err)
+
+	// Create group matches
+	matches := []entity.Match{
+		{Round: 0, Country1: &countries[0], Country2: &countries[1]}, // USA vs MEX
+		{Round: 0, Country1: &countries[0], Country2: &countries[2]}, // USA vs CAN
+		{Round: 0, Country1: &countries[0], Country2: &countries[3]}, // USA vs ARG
+		{Round: 0, Country1: &countries[1], Country2: &countries[2]}, // MEX vs CAN
+		{Round: 0, Country1: &countries[1], Country2: &countries[3]}, // MEX vs ARG
+		{Round: 0, Country1: &countries[2], Country2: &countries[3]}, // CAN vs ARG
+	}
+	err = repo.CreateMatches(ctx, contest.ID, matches)
+	require.NoError(t, err)
+
+	// 4. Attempt to finalize standings: should fail because matches are incomplete
+	err = repo.FinalizeGroupRankings(ctx, contest.ID, "A", []string{"USA", "MEX", "CAN", "ARG"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "incomplete group matches")
+
+	// 5. Complete all matches
+	dbMatches, err := repo.ListGroupMatches(ctx, contest.ID, "A")
+	require.NoError(t, err)
+	goals1, goals2 := 1, 0
+	for _, m := range dbMatches {
+		m.Country1Goals = &goals1
+		m.Country2Goals = &goals2
+		err = repo.UpdateMatch(ctx, contest.ID, m)
+		require.NoError(t, err)
+	}
+
+	// 6. Finalize standings with USA, MEX, CAN, ARG
+	err = repo.FinalizeGroupRankings(ctx, contest.ID, "A", []string{"USA", "MEX", "CAN", "ARG"})
+	require.NoError(t, err)
+
+	// 7. Verify Rank values in the database
+	var stdUSA, stdMEX, stdCAN model.GroupStandings
+	err = postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+		table.GroupStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+			AND(table.GroupStandings.CountryID.EQ(postgres.UUID(dbUSA.ID))),
+	).QueryContext(ctx, repo.db, &stdUSA)
+	require.NoError(t, err)
+	assert.Equal(t, int32(1), *stdUSA.Rank)
+
+	err = postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+		table.GroupStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+			AND(table.GroupStandings.CountryID.EQ(postgres.UUID(dbMEX.ID))),
+	).QueryContext(ctx, repo.db, &stdMEX)
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), *stdMEX.Rank)
+
+	// 8. Verify user's group score is updated to 45 points
+	var userStanding model.ContestStandings
+	err = postgres.SELECT(table.ContestStandings.AllColumns).
+		FROM(table.ContestStandings).
+		WHERE(
+			table.ContestStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+				AND(table.ContestStandings.UserID.EQ(postgres.UUID(uuid.MustParse(userID)))),
+		).QueryContext(ctx, repo.db, &userStanding)
+	require.NoError(t, err)
+	assert.Equal(t, int32(45), userStanding.GroupScore)
+
+	// 9. Re-finalizing rankings should fail (immutability rule)
+	err = repo.FinalizeGroupRankings(ctx, contest.ID, "A", []string{"USA", "MEX", "CAN", "ARG"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already been finalized")
+
+	// 10. Finalize Third Place Qualifier as TRUE (user predicted TRUE -> correct -> +5 points)
+	err = repo.FinalizeThirdPlaceQualifier(ctx, contest.ID, "A", true)
+	require.NoError(t, err)
+
+	// Verify qualifier boolean in the database
+	err = postgres.SELECT(table.GroupStandings.AllColumns).FROM(table.GroupStandings).WHERE(
+		table.GroupStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+			AND(table.GroupStandings.CountryID.EQ(postgres.UUID(dbCAN.ID))), // 3rd place team CAN
+	).QueryContext(ctx, repo.db, &stdCAN)
+	require.NoError(t, err)
+	require.NotNil(t, stdCAN.IsThirdPlaceQualifier)
+	assert.True(t, *stdCAN.IsThirdPlaceQualifier)
+
+	// Verify user's group score is updated to 50 points (45 + 5)
+	err = postgres.SELECT(table.ContestStandings.AllColumns).
+		FROM(table.ContestStandings).
+		WHERE(
+			table.ContestStandings.ContestID.EQ(postgres.UUID(uuid.MustParse(contest.ID))).
+				AND(table.ContestStandings.UserID.EQ(postgres.UUID(uuid.MustParse(userID)))),
+		).QueryContext(ctx, repo.db, &userStanding)
+	require.NoError(t, err)
+	assert.Equal(t, int32(50), userStanding.GroupScore)
+
+	// 11. Re-finalizing qualifier should fail (immutability rule)
+	err = repo.FinalizeThirdPlaceQualifier(ctx, contest.ID, "A", true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already been finalized")
+}

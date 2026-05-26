@@ -17,11 +17,12 @@ type groupPicksTable struct {
 	postgres.Table
 
 	// Columns
-	UserID    postgres.ColumnString
-	ContestID postgres.ColumnString
-	CountryID postgres.ColumnString
-	Letter    postgres.ColumnString
-	Place     postgres.ColumnInteger
+	UserID         postgres.ColumnString
+	ContestID      postgres.ColumnString
+	CountryID      postgres.ColumnString
+	Letter         postgres.ColumnString
+	Place          postgres.ColumnInteger
+	ExtraQualifier postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -63,25 +64,27 @@ func newGroupPicksTable(schemaName, tableName, alias string) *GroupPicksTable {
 
 func newGroupPicksTableImpl(schemaName, tableName, alias string) groupPicksTable {
 	var (
-		UserIDColumn    = postgres.StringColumn("user_id")
-		ContestIDColumn = postgres.StringColumn("contest_id")
-		CountryIDColumn = postgres.StringColumn("country_id")
-		LetterColumn    = postgres.StringColumn("letter")
-		PlaceColumn     = postgres.IntegerColumn("place")
-		allColumns      = postgres.ColumnList{UserIDColumn, ContestIDColumn, CountryIDColumn, LetterColumn, PlaceColumn}
-		mutableColumns  = postgres.ColumnList{LetterColumn, PlaceColumn}
-		defaultColumns  = postgres.ColumnList{}
+		UserIDColumn         = postgres.StringColumn("user_id")
+		ContestIDColumn      = postgres.StringColumn("contest_id")
+		CountryIDColumn      = postgres.StringColumn("country_id")
+		LetterColumn         = postgres.StringColumn("letter")
+		PlaceColumn          = postgres.IntegerColumn("place")
+		ExtraQualifierColumn = postgres.BoolColumn("extra_qualifier")
+		allColumns           = postgres.ColumnList{UserIDColumn, ContestIDColumn, CountryIDColumn, LetterColumn, PlaceColumn, ExtraQualifierColumn}
+		mutableColumns       = postgres.ColumnList{LetterColumn, PlaceColumn, ExtraQualifierColumn}
+		defaultColumns       = postgres.ColumnList{ExtraQualifierColumn}
 	)
 
 	return groupPicksTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		UserID:    UserIDColumn,
-		ContestID: ContestIDColumn,
-		CountryID: CountryIDColumn,
-		Letter:    LetterColumn,
-		Place:     PlaceColumn,
+		UserID:         UserIDColumn,
+		ContestID:      ContestIDColumn,
+		CountryID:      CountryIDColumn,
+		Letter:         LetterColumn,
+		Place:          PlaceColumn,
+		ExtraQualifier: ExtraQualifierColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

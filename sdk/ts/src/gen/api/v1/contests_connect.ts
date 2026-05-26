@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateContestRequest, CreateContestResponse, CreateSubcontestRequest, CreateSubcontestResponse, DeleteSubcontestRequest, DeleteSubcontestResponse, JoinSubcontestRequest, JoinSubcontestResponse, ListContestsRequest, ListContestsResponse, ListSubcontestsRequest, ListSubcontestsResponse } from "./contests_pb.js";
+import { CreateContestRequest, CreateContestResponse, CreateSubcontestRequest, CreateSubcontestResponse, DeleteSubcontestRequest, DeleteSubcontestResponse, FinalizeGroupRankingsRequest, FinalizeGroupRankingsResponse, FinalizeThirdPlaceQualifierRequest, FinalizeThirdPlaceQualifierResponse, JoinSubcontestRequest, JoinSubcontestResponse, ListContestsRequest, ListContestsResponse, ListSubcontestsRequest, ListSubcontestsResponse } from "./contests_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -64,6 +64,24 @@ export const ContestService = {
       name: "JoinSubcontest",
       I: JoinSubcontestRequest,
       O: JoinSubcontestResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc api.v1.ContestService.FinalizeGroupRankings
+     */
+    finalizeGroupRankings: {
+      name: "FinalizeGroupRankings",
+      I: FinalizeGroupRankingsRequest,
+      O: FinalizeGroupRankingsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc api.v1.ContestService.FinalizeThirdPlaceQualifier
+     */
+    finalizeThirdPlaceQualifier: {
+      name: "FinalizeThirdPlaceQualifier",
+      I: FinalizeThirdPlaceQualifierRequest,
+      O: FinalizeThirdPlaceQualifierResponse,
       kind: MethodKind.Unary,
     },
   }

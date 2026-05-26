@@ -41,6 +41,7 @@ message RankedCountry {
     int64 goals_against = 8;
     int64 goal_difference = 9;
     int64 conduct_score = 10;
+    bool is_third_place_qualifier = 11;
 }
 
 message Group {

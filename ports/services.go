@@ -13,6 +13,8 @@ type ContestService interface {
 	CreateSubcontest(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error)
 	DeleteSubcontest(ctx context.Context, userID string, subcontestSlug string) error
 	JoinSubcontest(ctx context.Context, userID string, joinCode string) error
+	FinalizeGroupRankings(ctx context.Context, contestSlug string, groupLetter string, orderedCountryCodes []string) error
+	FinalizeThirdPlaceQualifier(ctx context.Context, contestSlug string, groupLetter string, isWildcardQualifier bool) error
 }
 
 type LeaderboardService interface {

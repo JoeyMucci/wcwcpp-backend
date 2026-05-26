@@ -936,3 +936,241 @@ func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, m
 
 	return nil
 }
+
+func (r *ContestRepository) FinalizeGroupRankings(ctx context.Context, contestID string, groupLetter string, orderedCountryCodes []string) error {
+	parsedContestID := uuid.MustParse(contestID)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Verify that all group matches are completed (no nil goals).
+	type incompleteCountResult struct {
+		Count int64
+	}
+	var incompleteCount incompleteCountResult
+	chkStmt := postgres.SELECT(postgres.COUNT(table.Matches.ID).AS("incomplete_count_result.count")).
+		FROM(
+			table.Matches.
+				INNER_JOIN(table.GroupStandings, table.GroupStandings.ContestID.EQ(table.Matches.ContestID).
+					AND(table.GroupStandings.CountryID.EQ(table.Matches.Country1ID))),
+		).
+		WHERE(
+			table.Matches.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.Matches.Round.EQ(postgres.Int32(0))).
+				AND(table.GroupStandings.Letter.EQ(postgres.String(groupLetter))).
+				AND(table.Matches.Country1Goals.IS_NULL().OR(table.Matches.Country2Goals.IS_NULL())),
+		)
+	if err := chkStmt.QueryContext(ctx, tx, &incompleteCount); err != nil {
+		return fmt.Errorf("failed to check for incomplete group matches: %w", err)
+	}
+	if incompleteCount.Count > 0 {
+		return fmt.Errorf("cannot finalize standings: there are %d incomplete group matches", incompleteCount.Count)
+	}
+
+	// 2. Verify that group has not already been finalized.
+	type finalizedCountResult struct {
+		Count int64
+	}
+	var finalizedCount finalizedCountResult
+	finalizedStmt := postgres.SELECT(postgres.COUNT(table.GroupStandings.CountryID).AS("finalized_count_result.count")).
+		FROM(table.GroupStandings).
+		WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupStandings.Letter.EQ(postgres.String(groupLetter))).
+				AND(table.GroupStandings.Rank.IS_NOT_NULL()),
+		)
+	if err := finalizedStmt.QueryContext(ctx, tx, &finalizedCount); err != nil {
+		return fmt.Errorf("failed to check for existing finalization: %w", err)
+	}
+	if finalizedCount.Count > 0 {
+		return fmt.Errorf("group %s standings have already been finalized and cannot be updated again", groupLetter)
+	}
+
+	// 3. Map country codes to UUIDs.
+	countryMap, err := r.GetCountryCodeToIDMap(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to load country map: %w", err)
+	}
+
+	// 4. Update the rank of each country.
+	rankMap := make(map[uuid.UUID]int32)
+	for idx, code := range orderedCountryCodes {
+		idStr, ok := countryMap[code]
+		if !ok {
+			return fmt.Errorf("invalid country code: %s", code)
+		}
+		countryID := uuid.MustParse(idStr)
+		rank := int32(idx + 1)
+		rankMap[countryID] = rank
+
+		updStmt := table.GroupStandings.UPDATE(table.GroupStandings.Rank).
+			SET(table.GroupStandings.Rank.SET(postgres.Int32(rank))).
+			WHERE(
+				table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+					AND(table.GroupStandings.CountryID.EQ(postgres.UUID(countryID))),
+			)
+		if _, err := updStmt.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("failed to update rank for %s: %w", code, err)
+		}
+	}
+
+	// 5. Query user predictions for this group.
+	var picks []model.GroupPicks
+	picksStmt := postgres.SELECT(
+		table.GroupPicks.UserID,
+		table.GroupPicks.CountryID,
+		table.GroupPicks.Place,
+	).FROM(table.GroupPicks).
+		WHERE(
+			table.GroupPicks.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupPicks.Letter.EQ(postgres.String(groupLetter))),
+		)
+	if err := picksStmt.QueryContext(ctx, tx, &picks); err != nil {
+		return fmt.Errorf("failed to fetch user group picks: %w", err)
+	}
+
+	// 6. Calculate points and update contest standings.
+	userPoints := make(map[uuid.UUID]int32)
+	for _, p := range picks {
+		actualRank, exists := rankMap[p.CountryID]
+		if !exists {
+			continue
+		}
+
+		var multiplier int32
+		switch p.Place {
+		case 1:
+			multiplier = 3
+		case 2:
+			multiplier = 2
+		case 3:
+			multiplier = 1
+		case 4:
+			multiplier = 0
+		}
+
+		var basePoints int32
+		switch actualRank {
+		case 1:
+			basePoints = 10
+		case 2:
+			basePoints = 6
+		case 3:
+			basePoints = 3
+		case 4:
+			basePoints = 1
+		}
+
+		points := basePoints * multiplier
+		userPoints[p.UserID] += points
+	}
+
+	for uID, pts := range userPoints {
+		updStandings := table.ContestStandings.UPDATE(table.ContestStandings.GroupScore).
+			SET(table.ContestStandings.GroupScore.ADD(postgres.Int32(pts))).
+			WHERE(
+				table.ContestStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+					AND(table.ContestStandings.UserID.EQ(postgres.UUID(uID))),
+			)
+		if _, err := updStandings.ExecContext(ctx, tx); err != nil {
+			return fmt.Errorf("failed to increment user group score: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (r *ContestRepository) FinalizeThirdPlaceQualifier(ctx context.Context, contestID string, groupLetter string, isWildcardQualifier bool) error {
+	parsedContestID := uuid.MustParse(contestID)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Find the 3rd-place team in the group standings.
+	type thirdPlaceTeamResult struct {
+		CountryID uuid.UUID `sql:"primary_key"`
+	}
+	var thirdPlaceTeam thirdPlaceTeamResult
+	tpStmt := postgres.SELECT(table.GroupStandings.CountryID.AS("third_place_team_result.country_id")).
+		FROM(table.GroupStandings).
+		WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupStandings.Letter.EQ(postgres.String(groupLetter))).
+				AND(table.GroupStandings.Rank.EQ(postgres.Int32(3))),
+		)
+	if err := tpStmt.QueryContext(ctx, tx, &thirdPlaceTeam); err != nil {
+		return fmt.Errorf("failed to find third-place team: group rankings might not be finalized yet: %w", err)
+	}
+
+	// 2. Check if third-place qualifier is already finalized.
+	var existingQual model.GroupStandings
+	checkStmt := postgres.SELECT(table.GroupStandings.IsThirdPlaceQualifier).
+		FROM(table.GroupStandings).
+		WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(thirdPlaceTeam.CountryID))),
+		)
+	if err := checkStmt.QueryContext(ctx, tx, &existingQual); err != nil {
+		return fmt.Errorf("failed to check existing qualifier: %w", err)
+	}
+	if existingQual.IsThirdPlaceQualifier != nil {
+		return fmt.Errorf("third-place qualifier for group %s has already been finalized and cannot be updated again", groupLetter)
+	}
+
+	// 3. Update third-place qualifier status.
+	updStmt := table.GroupStandings.UPDATE(table.GroupStandings.IsThirdPlaceQualifier).
+		SET(table.GroupStandings.IsThirdPlaceQualifier.SET(postgres.Bool(isWildcardQualifier))).
+		WHERE(
+			table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupStandings.CountryID.EQ(postgres.UUID(thirdPlaceTeam.CountryID))),
+		)
+	if _, err := updStmt.ExecContext(ctx, tx); err != nil {
+		return fmt.Errorf("failed to update third-place qualifier status: %w", err)
+	}
+
+	// 4. Query user predictions (extra_qualifier) for this group.
+	var picks []model.GroupPicks
+	picksStmt := postgres.SELECT(
+		table.GroupPicks.UserID,
+		table.GroupPicks.ExtraQualifier,
+	).DISTINCT(table.GroupPicks.UserID, table.GroupPicks.ExtraQualifier).
+		FROM(table.GroupPicks).
+		WHERE(
+			table.GroupPicks.ContestID.EQ(postgres.UUID(parsedContestID)).
+				AND(table.GroupPicks.Letter.EQ(postgres.String(groupLetter))),
+		)
+	if err := picksStmt.QueryContext(ctx, tx, &picks); err != nil {
+		return fmt.Errorf("failed to fetch user group qualifier picks: %w", err)
+	}
+
+	// 5. Award 5 points if they correctly predicted the boolean advancement.
+	for _, p := range picks {
+		if p.ExtraQualifier == isWildcardQualifier {
+			updStandings := table.ContestStandings.UPDATE(table.ContestStandings.GroupScore).
+				SET(table.ContestStandings.GroupScore.ADD(postgres.Int32(5))).
+				WHERE(
+					table.ContestStandings.ContestID.EQ(postgres.UUID(parsedContestID)).
+						AND(table.ContestStandings.UserID.EQ(postgres.UUID(p.UserID))),
+				)
+			if _, err := updStandings.ExecContext(ctx, tx); err != nil {
+				return fmt.Errorf("failed to award bonus points: %w", err)
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}

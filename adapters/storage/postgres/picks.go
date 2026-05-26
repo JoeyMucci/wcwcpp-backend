@@ -41,6 +41,7 @@ func (r *PicksRepository) ListGroupPicks(ctx context.Context, userID string, con
 	stmt := postgres.SELECT(
 		table.GroupPicks.Letter,
 		table.GroupPicks.Place,
+		table.GroupPicks.ExtraQualifier,
 		table.Countries.Code,
 		table.Countries.FullName,
 	).FROM(
@@ -73,6 +74,7 @@ func (r *PicksRepository) ListGroupPicks(ctx context.Context, userID string, con
 			Country: entity.Country{Code: row.Countries.Code, FullName: row.Countries.FullName},
 			Place:   int(row.GroupPicks.Place),
 		})
+		grouped[letter].ExtraQualifier = row.GroupPicks.ExtraQualifier
 	}
 
 	// Preserve alphabetical letter order.
@@ -116,16 +118,18 @@ func (r *PicksRepository) ListGroupStandings(ctx context.Context, contestID stri
 	result := make([]entity.GroupStanding, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, entity.GroupStanding{
-			Country:        entity.Country{Code: row.Countries.Code, FullName: row.Countries.FullName},
-			Letter:         row.GroupStandings.Letter,
-			Points:         int64(row.GroupStandings.Points),
-			Wins:           int64(row.GroupStandings.Wins),
-			Draws:          int64(row.GroupStandings.Draws),
-			Losses:         int64(row.GroupStandings.Losses),
-			GoalsFor:       int64(row.GroupStandings.Gf),
-			GoalsAgainst:   int64(row.GroupStandings.Ga),
-			GoalDifference: int64(row.GroupStandings.Gd),
-			ConductScore:   int64(row.GroupStandings.Cs),
+			Country:               entity.Country{Code: row.Countries.Code, FullName: row.Countries.FullName},
+			Letter:                row.GroupStandings.Letter,
+			Points:                int64(row.GroupStandings.Points),
+			Wins:                  int64(row.GroupStandings.Wins),
+			Draws:                 int64(row.GroupStandings.Draws),
+			Losses:                int64(row.GroupStandings.Losses),
+			GoalsFor:              int64(row.GroupStandings.Gf),
+			GoalsAgainst:          int64(row.GroupStandings.Ga),
+			GoalDifference:        int64(row.GroupStandings.Gd),
+			ConductScore:          int64(row.GroupStandings.Cs),
+			Rank:                  row.GroupStandings.Rank,
+			IsThirdPlaceQualifier: row.GroupStandings.IsThirdPlaceQualifier,
 		})
 	}
 	return result, nil
@@ -146,6 +150,7 @@ func (r *PicksRepository) CreateGroupPicks(ctx context.Context, userID string, c
 		table.GroupPicks.Letter,
 		table.GroupPicks.Place,
 		table.GroupPicks.CountryID,
+		table.GroupPicks.ExtraQualifier,
 	)
 
 	hasValues := false
@@ -162,6 +167,7 @@ func (r *PicksRepository) CreateGroupPicks(ctx context.Context, userID string, c
 				pick.Letter,
 				int32(entry.Place),
 				countryID,
+				pick.ExtraQualifier,
 			)
 			hasValues = true
 		}

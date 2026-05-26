@@ -30,6 +30,8 @@ type ContestRepository interface {
 	ListGroupMatches(ctx context.Context, contestID string, letter string) ([]entity.Match, error)
 	ListKnockoutMatches(ctx context.Context, contestID string) ([]entity.Match, error)
 	UpdateMatch(ctx context.Context, contestID string, match entity.Match) error
+	FinalizeGroupRankings(ctx context.Context, contestID string, groupLetter string, orderedCountryCodes []string) error
+	FinalizeThirdPlaceQualifier(ctx context.Context, contestID string, groupLetter string, isWildcardQualifier bool) error
 	Search
 }
 

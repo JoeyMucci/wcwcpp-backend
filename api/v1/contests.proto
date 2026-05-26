@@ -58,6 +58,22 @@ message JoinSubcontestRequest {
 
 message JoinSubcontestResponse {}
 
+message FinalizeGroupRankingsRequest {
+    string contest_slug = 1;
+    string group_letter = 2;
+    repeated string ordered_country_codes = 3;
+}
+
+message FinalizeGroupRankingsResponse {}
+
+message FinalizeThirdPlaceQualifierRequest {
+    string contest_slug = 1;
+    string group_letter = 2;
+    bool is_wildcard_qualifier = 3;
+}
+
+message FinalizeThirdPlaceQualifierResponse {}
+
 service ContestService {
     rpc ListContests(ListContestsRequest) returns (ListContestsResponse);
     rpc CreateContest(CreateContestRequest) returns (CreateContestResponse);
@@ -65,4 +81,6 @@ service ContestService {
     rpc CreateSubcontest(CreateSubcontestRequest) returns (CreateSubcontestResponse);
     rpc DeleteSubcontest(DeleteSubcontestRequest) returns (DeleteSubcontestResponse);
     rpc JoinSubcontest(JoinSubcontestRequest) returns (JoinSubcontestResponse);
+    rpc FinalizeGroupRankings(FinalizeGroupRankingsRequest) returns (FinalizeGroupRankingsResponse);
+    rpc FinalizeThirdPlaceQualifier(FinalizeThirdPlaceQualifierRequest) returns (FinalizeThirdPlaceQualifierResponse);
 }
