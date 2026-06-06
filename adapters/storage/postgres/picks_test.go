@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"sort"
 	"testing"
 	"time"
 
@@ -267,6 +268,7 @@ func TestPicksRepository_ListKnockoutResults(t *testing.T) {
 	for code := range codeToID {
 		codes = append(codes, code)
 	}
+	sort.Strings(codes)
 
 	// Match 1: Outright win (Country 1 wins 2-1)
 	m1ID := uuid.New().String()
