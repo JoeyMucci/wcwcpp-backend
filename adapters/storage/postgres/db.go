@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -20,6 +21,12 @@ func NewDB() (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+
+	// Configure connection pool parameters for production readiness
+	db.SetMaxOpenConns(25)                 // Set maximum number of open connections
+	db.SetMaxIdleConns(25)                 // Set maximum number of idle connections
+	db.SetConnMaxLifetime(5 * time.Minute) // Maximum amount of time a connection may be reused
+	db.SetConnMaxIdleTime(3 * time.Minute) // Maximum amount of time a connection may be idle
 
 	// Test the connection
 	if err := db.Ping(); err != nil {
