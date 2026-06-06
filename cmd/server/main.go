@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/joey/wcwcpp-backend/adapters/auth"
@@ -105,10 +111,26 @@ func main() {
 	matchPath, matchSvcHandler := v1connect.NewMatchServiceHandler(matchHandler, connect.WithCodec(jsonCodec))
 	mux.Handle(matchPath, matchSvcHandler)
 
-	// Simple and robust CORS middleware to support preflight OPTIONS requests from localhost:3000
+	allowedOriginsStr := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOriginsStr == "" {
+		log.Fatal("ALLOWED_ORIGINS environment variable is required but not set")
+	}
+
+	allowedOrigins := strings.Split(allowedOriginsStr, ",")
+	for i, origin := range allowedOrigins {
+		allowedOrigins[i] = strings.TrimSpace(origin)
+	}
+
+	// Simple and robust CORS middleware to support preflight OPTIONS requests
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+			reqOrigin := r.Header.Get("Origin")
+			for _, allowed := range allowedOrigins {
+				if reqOrigin == allowed {
+					w.Header().Set("Access-Control-Allow-Origin", allowed)
+					break
+				}
+			}
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Connect-Protocol-Version")
 			w.Header().Set("Access-Control-Max-Age", "3600")
@@ -121,13 +143,43 @@ func main() {
 		})
 	}
 
-	fmt.Println("Starting server on :8080")
-	// Use h2c for unencrypted HTTP/2 (required for Connect without TLS)
-	err = http.ListenAndServe(
-		":8080",
-		h2c.NewHandler(corsMiddleware(mux), &http2.Server{}),
-	)
-	if err != nil {
-		log.Fatalf("Server failed: %v", err)
+	// Create a production-ready HTTP server with h2c and timeouts
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           h2c.NewHandler(corsMiddleware(mux), &http2.Server{}),
+		ReadHeaderTimeout: 2 * time.Second,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
+
+	// Channel to listen for OS signals
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		fmt.Println("Starting server on :8080")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	// Wait for termination signal
+	<-stop
+	fmt.Println("Shutting down server gracefully...")
+
+	// Create context with timeout for shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server shutdown error: %v", err)
+	}
+
+	// Close database connection pool
+	if err := db.Close(); err != nil {
+		log.Printf("Database close error: %v", err)
+	}
+
+	fmt.Println("Server stopped successfully")
 }

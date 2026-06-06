@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -99,7 +100,7 @@ func main() {
 	}
 	fmt.Printf("Successfully seeded %d user accounts!\n", len(users))
 
-	// 3. Define and Create 3 Contests at different completion stages
+	// 3. Define and Create Contests at different completion stages
 	contestRepo := postgres.NewContestRepository(db)
 	contestService := service.NewContestService(contestRepo)
 	picksRepo := postgres.NewPicksRepository(db)
@@ -134,6 +135,26 @@ func main() {
 		time.Now().Add(96*time.Hour),
 	)
 
+	// Contest 4: perfect (Completed / All matches played / Joey predicts everything right)
+	contestPerfect := makeContestEntity(
+		"Joey Perfect Predictions",
+		"perfect",
+		time.Now().Add(-4*365*24*time.Hour),
+		time.Now().Add(-3*365*24*time.Hour),
+		time.Now().Add(-4*365*24*time.Hour),
+		time.Now().Add(-3*365*24*time.Hour),
+	)
+
+	// Contest 5: perfect-ish (Completed / All matches played / Joey predicts everything right except third place qualifiers and third place match)
+	contestPerfectIsh := makeContestEntity(
+		"Joey Almost Perfect Predictions",
+		"perfect-ish",
+		time.Now().Add(-4*365*24*time.Hour),
+		time.Now().Add(-3*365*24*time.Hour),
+		time.Now().Add(-4*365*24*time.Hour),
+		time.Now().Add(-3*365*24*time.Hour),
+	)
+
 	fmt.Println("Seeding Contest configurations...")
 	if err := contestService.CreateContest(ctx, contestFinished); err != nil {
 		log.Fatalf("failed to create Finished: %v", err)
@@ -144,8 +165,14 @@ func main() {
 	if err := contestService.CreateContest(ctx, contestFuture); err != nil {
 		log.Fatalf("failed to create Future: %v", err)
 	}
+	if err := contestService.CreateContest(ctx, contestPerfect); err != nil {
+		log.Fatalf("failed to create Perfect: %v", err)
+	}
+	if err := contestService.CreateContest(ctx, contestPerfectIsh); err != nil {
+		log.Fatalf("failed to create Perfect-ish: %v", err)
+	}
 
-	var idFinished, idInProgress, idFuture string
+	var idFinished, idInProgress, idFuture, idPerfect, idPerfectIsh string
 	err = db.QueryRowContext(ctx, "SELECT id FROM contests WHERE slug = 'finished'").Scan(&idFinished)
 	if err != nil {
 		log.Fatalf("failed to get finished ID: %v", err)
@@ -157,6 +184,14 @@ func main() {
 	err = db.QueryRowContext(ctx, "SELECT id FROM contests WHERE slug = 'future'").Scan(&idFuture)
 	if err != nil {
 		log.Fatalf("failed to get future ID: %v", err)
+	}
+	err = db.QueryRowContext(ctx, "SELECT id FROM contests WHERE slug = 'perfect'").Scan(&idPerfect)
+	if err != nil {
+		log.Fatalf("failed to get perfect ID: %v", err)
+	}
+	err = db.QueryRowContext(ctx, "SELECT id FROM contests WHERE slug = 'perfect-ish'").Scan(&idPerfectIsh)
+	if err != nil {
+		log.Fatalf("failed to get perfect-ish ID: %v", err)
 	}
 
 	countriesFinished, err := getContestCountries(ctx, db, idFinished)
@@ -171,8 +206,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to query Future countries: %v", err)
 	}
+	countriesPerfect, err := getContestCountries(ctx, db, idPerfect)
+	if err != nil {
+		log.Fatalf("failed to query Perfect countries: %v", err)
+	}
+	countriesPerfectIsh, err := getContestCountries(ctx, db, idPerfectIsh)
+	if err != nil {
+		log.Fatalf("failed to query Perfect-ish countries: %v", err)
+	}
 
 	allLetters := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"}
+	joeyID := userIDs["jmucci314@gmail.com"]
+	jpmID := userIDs["jpm73@njit.edu"]
 
 	// ==========================================
 	// 4. Seed Contest: Future
@@ -233,11 +278,83 @@ func main() {
 	simulateKnockoutStage(ctx, contestRepo, db, idFinished, r)
 
 	// ==========================================
+	// 6.5. Seed Contest: Perfect
+	// ==========================================
+	fmt.Println("Seeding predictions for 'perfect' contest...")
+	// A. Seed group picks first for all users
+	for _, uID := range allUserIDs {
+		if uID == joeyID {
+			if err := seedGroupPicksForJoey(ctx, picksRepo, db, uID, idPerfect, countriesPerfect, allLetters, true); err != nil {
+				log.Fatalf("failed seeding group picks for perfect (Joey): %v", err)
+			}
+		} else {
+			if err := seedGroupPicksForUser(ctx, picksRepo, db, uID, idPerfect, countriesPerfect, allLetters, r); err != nil {
+				log.Fatalf("failed seeding group picks for perfect: %v", err)
+			}
+		}
+	}
+	// B. Play group stage matches and finalize group standings/qualifiers
+	fmt.Println("Simulating and playing out 'perfect' group stage...")
+	simulateGroupStageDeterministic(ctx, contestRepo, db, idPerfect)
+
+	// C. Now that Round of 32 knockout matches are populated, seed knockout picks for all users
+	fmt.Println("Seeding knockout predictions for 'perfect'...")
+	for _, uID := range allUserIDs {
+		if uID == joeyID {
+			if err := seedKnockoutPicksForJoey(ctx, picksRepo, db, uID, idPerfect, true); err != nil {
+				log.Fatalf("failed seeding knockout picks for perfect (Joey): %v", err)
+			}
+		} else {
+			if err := seedKnockoutPicksForUserWithOfficialMatchups(ctx, picksRepo, db, uID, idPerfect, r); err != nil {
+				log.Fatalf("failed seeding knockout picks for perfect: %v", err)
+			}
+		}
+	}
+	// D. Play knockout stage matches to determine winners, which will calculate/update knockout points
+	fmt.Println("Simulating and playing out 'perfect' knockout stage...")
+	simulateKnockoutStageDeterministic(ctx, contestRepo, db, idPerfect)
+
+	// ==========================================
+	// 6.6. Seed Contest: Perfect-ish
+	// ==========================================
+	fmt.Println("Seeding predictions for 'perfect-ish' contest...")
+	// A. Seed group picks first for all users
+	for _, uID := range allUserIDs {
+		if uID == joeyID {
+			if err := seedGroupPicksForJoey(ctx, picksRepo, db, uID, idPerfectIsh, countriesPerfectIsh, allLetters, false); err != nil {
+				log.Fatalf("failed seeding group picks for perfect-ish (Joey): %v", err)
+			}
+		} else {
+			if err := seedGroupPicksForUser(ctx, picksRepo, db, uID, idPerfectIsh, countriesPerfectIsh, allLetters, r); err != nil {
+				log.Fatalf("failed seeding group picks for perfect-ish: %v", err)
+			}
+		}
+	}
+	// B. Play group stage matches and finalize group standings/qualifiers
+	fmt.Println("Simulating and playing out 'perfect-ish' group stage...")
+	simulateGroupStageDeterministic(ctx, contestRepo, db, idPerfectIsh)
+
+	// C. Now that Round of 32 knockout matches are populated, seed knockout picks for all users
+	fmt.Println("Seeding knockout predictions for 'perfect-ish'...")
+	for _, uID := range allUserIDs {
+		if uID == joeyID {
+			if err := seedKnockoutPicksForJoey(ctx, picksRepo, db, uID, idPerfectIsh, false); err != nil {
+				log.Fatalf("failed seeding knockout picks for perfect-ish (Joey): %v", err)
+			}
+		} else {
+			if err := seedKnockoutPicksForUserWithOfficialMatchups(ctx, picksRepo, db, uID, idPerfectIsh, r); err != nil {
+				log.Fatalf("failed seeding knockout picks for perfect-ish: %v", err)
+			}
+		}
+	}
+	// D. Play knockout stage matches to determine winners, which will calculate/update knockout points
+	fmt.Println("Simulating and playing out 'perfect-ish' knockout stage...")
+	simulateKnockoutStageDeterministic(ctx, contestRepo, db, idPerfectIsh)
+
+	// ==========================================
 	// 7. Seed Subcontests (Mini-leagues / Pools)
 	// ==========================================
 	fmt.Println("Seeding Subcontests and mini-leagues...")
-	joeyID := userIDs["jmucci314@gmail.com"]
-	jpmID := userIDs["jpm73@njit.edu"]
 
 	// Subcontests for In Progress
 	seedSubcontest(ctx, db, idInProgress, userIDs[superadminEmail], "Antigravity Global In Progress", "antigravity-global-in-progress", "JOINPROG", append(allUserIDs[1:28], joeyID, jpmID))
@@ -253,12 +370,20 @@ func main() {
 	seedSubcontest(ctx, db, idFuture, userIDs[superadminEmail], "Future Global Arena", "future-global-arena", "FUTGLOBA", append(allUserIDs[1:28], joeyID, jpmID))
 	seedSubcontest(ctx, db, idFuture, jpmID, "NJIT Future Pool", "njit-future-pool", "NUTFUTUR", []string{userIDs["admin@example.com"], joeyID, allUserIDs[7], allUserIDs[8]})
 
+	// Subcontests for Perfect
+	seedSubcontest(ctx, db, idPerfect, userIDs[superadminEmail], "Perfect Global Arena", "perfect-global-arena", "PERFCODE", append(allUserIDs[1:28], joeyID, jpmID))
+
+	// Subcontests for Perfect-ish
+	seedSubcontest(ctx, db, idPerfectIsh, userIDs[superadminEmail], "Almost Perfect Global Arena", "almost-perfect-global-arena", "ALMPERFC", append(allUserIDs[1:28], joeyID, jpmID))
+
 	fmt.Println("\n=============================================")
 	fmt.Println("DATABASE SEEDING COMPLETED SUCCESSFULLY!")
 	fmt.Printf(" - Seeded %d active users\n", len(users))
 	fmt.Printf(" - Seeding Contest 'finished' (Completed / Full points populated)\n")
 	fmt.Printf(" - Seeding Contest 'in-progress' (Group stage played/finalized / Knockout picks made / Scores calculated)\n")
 	fmt.Printf(" - Seeding Contest 'future' (Group picks submitted / Locked dates in future)\n")
+	fmt.Printf(" - Seeding Contest 'perfect' (Completed / Joey predicts everything right)\n")
+	fmt.Printf(" - Seeding Contest 'perfect-ish' (Completed / Joey predicts everything right except third place qualifiers and third place match)\n")
 	fmt.Printf(" - Created competitive subleague pools with leaderboards populated for all contests\n")
 	fmt.Println("=============================================")
 
@@ -1141,4 +1266,407 @@ func printContestResults(ctx context.Context, db *sql.DB) {
 		}
 	}
 	fmt.Println("==================================================================")
+}
+
+var countryIndexInGroup = map[string]int{
+	// Group A
+	"USA": 0, "MEX": 1, "CAN": 2, "CRC": 3,
+	// Group B
+	"BRA": 0, "ARG": 1, "URU": 2, "COL": 3,
+	// Group C
+	"ENG": 0, "FRA": 1, "GER": 2, "ITA": 3,
+	// Group D
+	"ESP": 0, "POR": 1, "NED": 2, "BEL": 3,
+	// Group E
+	"CRO": 0, "SEN": 1, "MAR": 2, "TUN": 3,
+	// Group F
+	"JPN": 0, "KOR": 1, "AUS": 2, "IRN": 3,
+	// Group G
+	"KSA": 0, "QAT": 1, "UAE": 2, "OMN": 3,
+	// Group H
+	"EGY": 0, "NGA": 1, "GHA": 2, "CMR": 3,
+	// Group I
+	"SWE": 0, "DEN": 1, "NOR": 2, "FIN": 3,
+	// Group J
+	"SUI": 0, "AUT": 1, "POL": 2, "UKR": 3,
+	// Group K
+	"TUR": 0, "GRE": 1, "CZE": 2, "SVK": 3,
+	// Group L
+	"WAL": 0, "SCO": 1, "IRL": 2, "NIR": 3,
+}
+
+func simulateGroupStageDeterministic(ctx context.Context, contestRepo *postgres.ContestRepository, db *sql.DB, contestID string) {
+	// 1. Play Group Stage matches (Round = 0)
+	rows, err := db.QueryContext(ctx, `
+		SELECT m.id, c1.code, c2.code 
+		FROM matches m
+		JOIN countries c1 ON m.country1_id = c1.id
+		JOIN countries c2 ON m.country2_id = c2.id
+		WHERE m.contest_id = $1 AND m.round = 0
+	`, contestID)
+	if err != nil {
+		log.Fatalf("failed to query group matches: %v", err)
+	}
+
+	type matchInfo struct {
+		id, c1, c2 string
+	}
+	var groupMatches []matchInfo
+	for rows.Next() {
+		var m matchInfo
+		if err := rows.Scan(&m.id, &m.c1, &m.c2); err != nil {
+			log.Fatalf("failed to scan group match: %v", err)
+		}
+		groupMatches = append(groupMatches, m)
+	}
+	rows.Close()
+
+	for _, gm := range groupMatches {
+		idx1 := countryIndexInGroup[gm.c1]
+		idx2 := countryIndexInGroup[gm.c2]
+		var g1, g2 int
+		if idx1 < idx2 {
+			g1 = 3 - idx1
+			g2 = 0
+		} else {
+			g1 = 0
+			g2 = 3 - idx2
+		}
+
+		match := entity.Match{
+			Country1:      &entity.Country{Code: gm.c1},
+			Country2:      &entity.Country{Code: gm.c2},
+			Country1Goals: &g1,
+			Country2Goals: &g2,
+			Round:         0,
+		}
+		if err := contestRepo.UpdateMatch(ctx, contestID, match); err != nil {
+			log.Fatalf("failed to play group match: %v", err)
+		}
+	}
+
+	// 2. Finalize Group Standings (A-L)
+	letters := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"}
+	for _, letter := range letters {
+		orderRows, err := db.QueryContext(ctx, `
+			SELECT c.code 
+			FROM group_standings gs
+			JOIN countries c ON gs.country_id = c.id
+			WHERE gs.contest_id = $1 AND gs.letter = $2
+			ORDER BY gs.points DESC, gs.gd DESC, gs.gf DESC, c.code ASC
+		`, contestID, letter)
+		if err != nil {
+			log.Fatalf("failed to query order for group %s: %v", letter, err)
+		}
+
+		var orderedCodes []string
+		for orderRows.Next() {
+			var code string
+			if err := orderRows.Scan(&code); err != nil {
+				log.Fatalf("failed to scan country code: %v", err)
+			}
+			orderedCodes = append(orderedCodes, code)
+		}
+		orderRows.Close()
+
+		if err := contestRepo.FinalizeGroupRankings(ctx, contestID, letter, orderedCodes); err != nil {
+			log.Fatalf("failed to finalize rankings for group %s: %v", letter, err)
+		}
+	}
+
+	// 3. Finalize Third Place Qualifiers dynamically based on actual standings
+	thirdRows, err := db.QueryContext(ctx, `
+		SELECT gs.letter
+		FROM group_standings gs
+		JOIN countries c ON gs.country_id = c.id
+		WHERE gs.contest_id = $1 AND gs.rank = 3
+		ORDER BY gs.points DESC, gs.gd DESC, gs.gf DESC, c.code ASC
+	`, contestID)
+	if err != nil {
+		log.Fatalf("failed to query third place standings: %v", err)
+	}
+
+	var sortedThirdPlaceLetters []string
+	for thirdRows.Next() {
+		var letter string
+		if err := thirdRows.Scan(&letter); err != nil {
+			log.Fatalf("failed to scan third place letter: %v", err)
+		}
+		sortedThirdPlaceLetters = append(sortedThirdPlaceLetters, letter)
+	}
+	thirdRows.Close()
+
+	if len(sortedThirdPlaceLetters) != 12 {
+		log.Fatalf("expected exactly 12 third-place teams, got %d", len(sortedThirdPlaceLetters))
+	}
+
+	qualifierMap := make(map[string]bool)
+	for i, letter := range sortedThirdPlaceLetters {
+		qualifierMap[letter] = (i < 8)
+	}
+
+	for _, letter := range letters {
+		isQualifier := qualifierMap[letter]
+		if err := contestRepo.FinalizeThirdPlaceQualifier(ctx, contestID, letter, isQualifier); err != nil {
+			log.Fatalf("failed to finalize third place qualifier for group %s: %v", letter, err)
+		}
+	}
+
+	// 4. Set up Round of 32 knockout matches (Round = 1) without goals or penalties
+	advRows, err := db.QueryContext(ctx, `
+		SELECT c.code 
+		FROM group_standings gs
+		JOIN countries c ON gs.country_id = c.id
+		WHERE gs.contest_id = $1 AND (gs.rank = 1 OR gs.rank = 2 OR (gs.rank = 3 AND gs.is_third_place_qualifier = true))
+		ORDER BY gs.letter ASC, gs.rank ASC
+	`, contestID)
+	if err != nil {
+		log.Fatalf("failed to query advancing teams: %v", err)
+	}
+
+	var advancingTeams []string
+	for advRows.Next() {
+		var code string
+		if err := advRows.Scan(&code); err != nil {
+			log.Fatalf("failed to scan advancing team code: %v", err)
+		}
+		advancingTeams = append(advancingTeams, code)
+	}
+	advRows.Close()
+
+	if len(advancingTeams) != 32 {
+		log.Fatalf("expected exactly 32 advancing teams, got %d", len(advancingTeams))
+	}
+
+	for i := 0; i < 16; i++ {
+		c1 := advancingTeams[2*i]
+		c2 := advancingTeams[2*i+1]
+
+		matchIdx := i
+		match := entity.Match{
+			Round:      1,
+			RoundIndex: &matchIdx,
+			Country1:   &entity.Country{Code: c1},
+			Country2:   &entity.Country{Code: c2},
+		}
+
+		if err := contestRepo.UpdateMatch(ctx, contestID, match); err != nil {
+			log.Fatalf("failed to update Round of 32 match index %d: %v", i, err)
+		}
+	}
+}
+
+func simulateKnockoutStageDeterministic(ctx context.Context, contestRepo *postgres.ContestRepository, db *sql.DB, contestID string) {
+	// Play Round of 32 knockout matches (Round = 1) by adding goals and penalties (Country 1 wins)
+	for i := 0; i < 16; i++ {
+		g1 := 2
+		g2 := 1
+		matchIdx := i
+		match := entity.Match{
+			Round:             1,
+			RoundIndex:        &matchIdx,
+			Country1Goals:     &g1,
+			Country2Goals:     &g2,
+		}
+
+		if err := contestRepo.UpdateMatch(ctx, contestID, match); err != nil {
+			log.Fatalf("failed to play Round of 32 match index %d: %v", i, err)
+		}
+	}
+
+	// Play subsequent rounds (Rounds 2 to 5)
+	for round := 2; round <= 5; round++ {
+		matchRows, err := db.QueryContext(ctx, `
+			SELECT m.round_index, c1.code, c2.code 
+			FROM matches m
+			JOIN countries c1 ON m.country1_id = c1.id
+			JOIN countries c2 ON m.country2_id = c2.id
+			WHERE m.contest_id = $1 AND m.round = $2
+			ORDER BY m.round_index ASC
+		`, contestID, round)
+		if err != nil {
+			log.Fatalf("failed to query Round %d matches: %v", round, err)
+		}
+
+		type koMatch struct {
+			idx    int
+			c1, c2 string
+		}
+		var koMatches []koMatch
+		for matchRows.Next() {
+			var km koMatch
+			if err := matchRows.Scan(&km.idx, &km.c1, &km.c2); err != nil {
+				log.Fatalf("failed to scan Round %d match: %v", round, err)
+			}
+			koMatches = append(koMatches, km)
+		}
+		matchRows.Close()
+
+		for _, km := range koMatches {
+			g1 := 2
+			g2 := 1
+			mIdx := km.idx
+			match := entity.Match{
+				Round:             round,
+				RoundIndex:        &mIdx,
+				Country1Goals:     &g1,
+				Country2Goals:     &g2,
+			}
+
+			if err := contestRepo.UpdateMatch(ctx, contestID, match); err != nil {
+				log.Fatalf("failed to play Round %d match index %d: %v", round, km.idx, err)
+			}
+		}
+	}
+}
+
+func seedGroupPicksForJoey(ctx context.Context, picksRepo *postgres.PicksRepository, db *sql.DB, userID, contestID string, countries []entity.Country, letters []string, isPerfect bool) error {
+	rows, err := db.QueryContext(ctx, `
+		SELECT c.code, gs.letter 
+		FROM group_standings gs
+		JOIN countries c ON gs.country_id = c.id
+		WHERE gs.contest_id = $1
+	`, contestID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	groupMap := make(map[string][]entity.Country)
+	for rows.Next() {
+		var code, letter string
+		if err := rows.Scan(&code, &letter); err != nil {
+			return err
+		}
+		var matchCountry entity.Country
+		for _, c := range countries {
+			if c.Code == code {
+				matchCountry = c
+				break
+			}
+		}
+		groupMap[letter] = append(groupMap[letter], matchCountry)
+	}
+
+	var picks []entity.GroupPick
+	for _, letter := range letters {
+		groupCountries, ok := groupMap[letter]
+		if !ok || len(groupCountries) == 0 {
+			continue
+		}
+
+		sorted := make([]entity.Country, len(groupCountries))
+		copy(sorted, groupCountries)
+		// Sort countries by their pre-defined group index
+		sort.Slice(sorted, func(i, j int) bool {
+			return countryIndexInGroup[sorted[i].Code] < countryIndexInGroup[sorted[j].Code]
+		})
+
+		var entries []entity.GroupPickEntry
+		for idx, t := range sorted {
+			entries = append(entries, entity.GroupPickEntry{
+				Country: t,
+				Place:   idx + 1,
+			})
+		}
+
+		isWildcardGroup := (letter == "A" || letter == "C" || letter == "D" || letter == "E" || letter == "F" || letter == "H" || letter == "K" || letter == "L")
+		extraQual := isWildcardGroup
+		if !isPerfect {
+			extraQual = !isWildcardGroup
+		}
+
+		picks = append(picks, entity.GroupPick{
+			Letter:         letter,
+			Entries:        entries,
+			ExtraQualifier: extraQual,
+		})
+	}
+
+	return picksRepo.CreateGroupPicks(ctx, userID, contestID, picks)
+}
+
+func seedKnockoutPicksForJoey(ctx context.Context, picksRepo *postgres.PicksRepository, db *sql.DB, userID, contestID string, isPerfect bool) error {
+	// 1. Query the 16 Round of 32 matches (Round = 1) from the database
+	rows, err := db.QueryContext(ctx, `
+		SELECT m.round_index, c1.code, c1.full_name, c2.code, c2.full_name
+		FROM matches m
+		JOIN countries c1 ON m.country1_id = c1.id
+		JOIN countries c2 ON m.country2_id = c2.id
+		WHERE m.contest_id = $1 AND m.round = 1
+		ORDER BY m.round_index ASC
+	`, contestID)
+	if err != nil {
+		return fmt.Errorf("failed to query Round of 32 matches: %w", err)
+	}
+	defer rows.Close()
+
+	type r32Match struct {
+		idx    int
+		c1, c2 entity.Country
+	}
+	var r32Matches []r32Match
+	for rows.Next() {
+		var rm r32Match
+		if err := rows.Scan(&rm.idx, &rm.c1.Code, &rm.c1.FullName, &rm.c2.Code, &rm.c2.FullName); err != nil {
+			return fmt.Errorf("failed to scan Round of 32 match: %w", err)
+		}
+		r32Matches = append(r32Matches, rm)
+	}
+
+	if len(r32Matches) != 16 {
+		return fmt.Errorf("expected 16 Round of 32 matches, found %d", len(r32Matches))
+	}
+
+	// 2. Select winners of Round of 32 (Round 1) to advance to Round of 16 (Round 2)
+	var entries []entity.KnockoutPickEntry
+	var r16Picks []entity.Country
+	for _, m := range r32Matches {
+		winner := m.c1
+		r16Picks = append(r16Picks, winner)
+		entries = append(entries, entity.KnockoutPickEntry{Country: winner, Round: 2})
+	}
+
+	// 3. Select winners of Round of 16 (Round 2) to advance to Quarterfinals (Round 3)
+	var qfPicks []entity.Country
+	for i := 0; i < 8; i++ {
+		winner := r16Picks[i*2]
+		qfPicks = append(qfPicks, winner)
+		entries = append(entries, entity.KnockoutPickEntry{Country: winner, Round: 3})
+	}
+
+	// 4. Select winners of Quarterfinals (Round 3) to advance to Semifinals (Round 4)
+	var sfPicks []entity.Country
+	for i := 0; i < 4; i++ {
+		winner := qfPicks[i*2]
+		sfPicks = append(sfPicks, winner)
+		entries = append(entries, entity.KnockoutPickEntry{Country: winner, Round: 4})
+	}
+
+	// 5. Select winners of Semifinals (Round 4) to advance to Finals (Round 5)
+	var finalPicks []entity.Country
+	var sfLosers []entity.Country
+	for i := 0; i < 2; i++ {
+		winner := sfPicks[i*2]
+		loser := sfPicks[i*2+1]
+		finalPicks = append(finalPicks, winner)
+		sfLosers = append(sfLosers, loser)
+		entries = append(entries, entity.KnockoutPickEntry{Country: winner, Round: 5})
+	}
+
+	// 6. Select Champion (Round 6) from the Finals
+	champion := finalPicks[0]
+	entries = append(entries, entity.KnockoutPickEntry{Country: champion, Round: 6})
+
+	// 7. Select Third Place Winner (Round 7) from the Semifinals Losers
+	var thirdPlaceWinner entity.Country
+	if isPerfect {
+		thirdPlaceWinner = sfLosers[0]
+	} else {
+		thirdPlaceWinner = sfLosers[1]
+	}
+	entries = append(entries, entity.KnockoutPickEntry{Country: thirdPlaceWinner, Round: 7})
+
+	pick := entity.KnockoutPick{Entries: entries}
+	return picksRepo.CreateKnockoutPicks(ctx, userID, contestID, pick)
 }
