@@ -382,7 +382,7 @@ func TestContestService_CreateSubcontest(t *testing.T) {
 
 		svc := NewContestService(mockRepo)
 
-		joinCode, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", true)
+		joinCode, _, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", true)
 		require.NoError(t, err)
 		require.NotEmpty(t, joinCode)
 	})
@@ -402,7 +402,7 @@ func TestContestService_CreateSubcontest(t *testing.T) {
 
 		svc := NewContestService(mockRepo)
 
-		joinCode, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", false)
+		joinCode, _, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", false)
 		require.NoError(t, err)
 		require.NotEmpty(t, joinCode)
 	})
@@ -416,7 +416,7 @@ func TestContestService_CreateSubcontest(t *testing.T) {
 
 		svc := NewContestService(mockRepo)
 
-		_, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", true)
+		_, _, err := svc.CreateSubcontest(context.Background(), "user-1", "world-cup-2026", "My Subcontest", true)
 		require.Error(t, err)
 		require.Equal(t, "contest not found", err.Error())
 	})

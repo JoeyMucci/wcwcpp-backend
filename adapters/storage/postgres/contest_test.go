@@ -562,12 +562,12 @@ func TestContestRepository_MatchOperations(t *testing.T) {
 	// User predicts:
 	// - CAN to reach Round of 16 (pickRound = 2, points = 15)
 	// - USA to reach Final (pickRound = 5, points = 30)
-	// - MEX to win Third Place (pickRound = 6, points = 5)
+	// - MEX to win Third Place (pickRound = 7, points = 5)
 	_, err = repo.db.ExecContext(ctx, `
 		INSERT INTO knockout_picks (user_id, contest_id, country_id, round) VALUES 
 		($1, $2, $3, 2),
 		($1, $2, $4, 5),
-		($1, $2, $5, 6)`,
+		($1, $2, $5, 7)`,
 		userID, contest.ID, dbCAN.ID, dbUSA.ID, dbMEX.ID)
 	require.NoError(t, err)
 

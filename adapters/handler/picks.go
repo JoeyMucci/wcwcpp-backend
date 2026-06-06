@@ -76,17 +76,31 @@ func buildRankedGroups(standings []entity.GroupStanding) []*v1.RankedGroup {
 			groupMap[s.Letter] = &v1.RankedGroup{Letter: s.Letter}
 			order = append(order, s.Letter)
 		}
+		var isThirdPlaceQ bool
+		if s.IsThirdPlaceQualifier != nil {
+			isThirdPlaceQ = *s.IsThirdPlaceQualifier
+		}
+		if s.Rank != nil {
+			groupMap[s.Letter].Finalized = true
+		}
+		if s.IsThirdPlaceQualifier != nil {
+			groupMap[s.Letter].ExtraQualifierFinalized = true
+			groupMap[s.Letter].ExtraQualifier = s.IsThirdPlaceQualifier
+		}
+
 		groupMap[s.Letter].RankedCountries = append(groupMap[s.Letter].RankedCountries, &v1.RankedCountry{
-			Code:           s.Country.Code,
-			FullName:       s.Country.FullName,
-			Points:         s.Points,
-			Wins:           s.Wins,
-			Draws:          s.Draws,
-			Losses:         s.Losses,
-			GoalsFor:       s.GoalsFor,
-			GoalsAgainst:   s.GoalsAgainst,
-			GoalDifference: s.GoalDifference,
-			ConductScore:   s.ConductScore,
+			Code:                  s.Country.Code,
+			FullName:              s.Country.FullName,
+			Points:                s.Points,
+			Wins:                  s.Wins,
+			Draws:                 s.Draws,
+			Losses:                s.Losses,
+			GoalsFor:              s.GoalsFor,
+			GoalsAgainst:          s.GoalsAgainst,
+			GoalDifference:        s.GoalDifference,
+			ConductScore:          s.ConductScore,
+			IsThirdPlaceQualifier: isThirdPlaceQ,
+			Rank:                  s.Rank,
 		})
 	}
 

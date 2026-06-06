@@ -100,19 +100,19 @@ func (s *ContestService) ListSubcontests(ctx context.Context, userID string, con
 	return s.repo.ListSubcontests(ctx, contest.ID, userID)
 }
 
-func (s *ContestService) CreateSubcontest(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
+func (s *ContestService) CreateSubcontest(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, string, error) {
 	contest, err := s.repo.GetContestBySlug(ctx, contestSlug)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if contest == nil {
-		return "", errors.New("contest not found")
+		return "", "", errors.New("contest not found")
 	}
 
 	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789"
 	joinCodeBytes := make([]byte, 8)
 	if _, err := rand.Read(joinCodeBytes); err != nil {
-		return "", err
+		return "", "", err
 	}
 	for i, b := range joinCodeBytes {
 		joinCodeBytes[i] = charset[b%byte(len(charset))]
@@ -128,16 +128,16 @@ func (s *ContestService) CreateSubcontest(ctx context.Context, userID string, co
 	}
 
 	if err := s.repo.CreateSubcontest(ctx, sub); err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if selfJoin {
 		if err := s.repo.JoinSubcontest(ctx, sub.ID, userID); err != nil {
-			return "", err
+			return "", "", err
 		}
 	}
 
-	return joinCode, nil
+	return joinCode, sub.Slug, nil
 }
 
 func (s *ContestService) DeleteSubcontest(ctx context.Context, userID string, subcontestSlug string) error {

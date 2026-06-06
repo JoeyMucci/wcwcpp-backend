@@ -5,6 +5,7 @@ package api.v1;
 option go_package = "github.com/joey/wcwcpp-backend/pkg/api/v1";
 
 import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
 
 message User {
     string id = 1;
@@ -15,7 +16,10 @@ message User {
 message Contest {
     string title = 1;
     string slug = 2;
-    bool active = 3;
+    google.protobuf.Timestamp group_unlock_date = 3;
+    google.protobuf.Timestamp group_lock_date = 4;
+    google.protobuf.Timestamp knockout_unlock_date = 5;
+    google.protobuf.Timestamp knockout_lock_date = 6;
 }
 
 message Subcontest {
@@ -23,6 +27,7 @@ message Subcontest {
     string slug = 2;
     bool is_owner = 3;
     bool is_member = 4;
+    string join_code = 5;
 }
 
 message Country {
@@ -42,6 +47,7 @@ message RankedCountry {
     int64 goal_difference = 9;
     int64 conduct_score = 10;
     bool is_third_place_qualifier = 11;
+    optional int32 rank = 12;
 }
 
 message Group {
@@ -59,6 +65,8 @@ message RankedGroup {
         max_items: 4
     }];
     optional bool extra_qualifier = 3;
+    bool finalized = 4;
+    bool extra_qualifier_finalized = 5;
 }
 
 message GroupPick {

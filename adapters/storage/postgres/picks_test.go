@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"sort"
 	"testing"
 	"time"
 
@@ -204,6 +205,14 @@ func TestPicksRepository_CreateGroupPicks(t *testing.T) {
 		userID, contestID).Scan(&count)
 	require.NoError(t, err)
 	assert.Equal(t, 2, count)
+
+	// Verify contest_standings row was created
+	var groupScore, knockoutScore int
+	err = db.QueryRowContext(ctx, "SELECT group_score, knockout_score FROM contest_standings WHERE user_id = $1 AND contest_id = $2",
+		userID, contestID).Scan(&groupScore, &knockoutScore)
+	require.NoError(t, err)
+	assert.Equal(t, 0, groupScore)
+	assert.Equal(t, 0, knockoutScore)
 }
 
 func TestPicksRepository_KnockoutPicks(t *testing.T) {
@@ -240,6 +249,14 @@ func TestPicksRepository_KnockoutPicks(t *testing.T) {
 	assert.Equal(t, codes[1], picks.Entries[0].Country.Code)
 	assert.Equal(t, 16, picks.Entries[1].Round)
 	assert.Equal(t, codes[0], picks.Entries[1].Country.Code)
+
+	// Verify contest_standings row was created
+	var groupScore, knockoutScore int
+	err = db.QueryRowContext(ctx, "SELECT group_score, knockout_score FROM contest_standings WHERE user_id = $1 AND contest_id = $2",
+		userID, contestID).Scan(&groupScore, &knockoutScore)
+	require.NoError(t, err)
+	assert.Equal(t, 0, groupScore)
+	assert.Equal(t, 0, knockoutScore)
 }
 
 func TestPicksRepository_ListKnockoutResults(t *testing.T) {
@@ -251,6 +268,7 @@ func TestPicksRepository_ListKnockoutResults(t *testing.T) {
 	for code := range codeToID {
 		codes = append(codes, code)
 	}
+	sort.Strings(codes)
 
 	// Match 1: Outright win (Country 1 wins 2-1)
 	m1ID := uuid.New().String()
@@ -260,12 +278,26 @@ func TestPicksRepository_ListKnockoutResults(t *testing.T) {
 		m1ID, contestID, codeToID[codes[0]], codeToID[codes[1]])
 	require.NoError(t, err)
 
+	// Seed country 1 into knockout_standings
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO knockout_standings (contest_id, country_id, round)
+		VALUES ($1, $2, 16)`,
+		contestID, codeToID[codes[0]])
+	require.NoError(t, err)
+
 	// Match 2: Penalty win (Draw 1-1, penalties 4-3 for Country 2)
 	m2ID := uuid.New().String()
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO matches (id, contest_id, country1_id, country2_id, country1_goals, country2_goals, country1_penalties, country2_penalties, round, round_index)
 		VALUES ($1, $2, $3, $4, 1, 1, 3, 4, 16, 2)`,
 		m2ID, contestID, codeToID[codes[2]], codeToID[codes[3]])
+	require.NoError(t, err)
+
+	// Seed country 2 into knockout_standings
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO knockout_standings (contest_id, country_id, round)
+		VALUES ($1, $2, 16)`,
+		contestID, codeToID[codes[3]])
 	require.NoError(t, err)
 
 	results, err := repo.ListKnockoutResults(ctx, contestID)
@@ -279,5 +311,63 @@ func TestPicksRepository_ListKnockoutResults(t *testing.T) {
 
 	// Match 2 winner should be codes[3]
 	assert.Equal(t, codes[3], results.Entries[1].Country.Code)
+}
+
+func TestPicksRepository_ListGroupStandings_ConductScoreOrdering(t *testing.T) {
+	repo, contestID, _ := setupPicksTest(t)
+	ctx := context.Background()
+	db := repo.db
+
+	// Let's get the country IDs for group A
+	var countryIDs []string
+	rows, err := db.QueryContext(ctx, "SELECT country_id FROM group_standings WHERE contest_id = $1 AND letter = 'A'", contestID)
+	require.NoError(t, err)
+	defer rows.Close()
+	for rows.Next() {
+		var cid string
+		err := rows.Scan(&cid)
+		require.NoError(t, err)
+		countryIDs = append(countryIDs, cid)
+	}
+
+	require.Len(t, countryIDs, 4)
+
+	// Update conduct scores:
+	// countryIDs[0]: cs = -5
+	// countryIDs[1]: cs = 2
+	// countryIDs[2]: cs = -1
+	// countryIDs[3]: cs = 5
+	//
+	// Expected descending order by Cs:
+	// 1st: countryIDs[3] (cs = 5)
+	// 2nd: countryIDs[1] (cs = 2)
+	// 3rd: countryIDs[2] (cs = -1)
+	// 4th: countryIDs[0] (cs = -5)
+
+	_, err = db.ExecContext(ctx, "UPDATE group_standings SET cs = -5 WHERE contest_id = $1 AND country_id = $2", contestID, countryIDs[0])
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "UPDATE group_standings SET cs = 2 WHERE contest_id = $1 AND country_id = $2", contestID, countryIDs[1])
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "UPDATE group_standings SET cs = -1 WHERE contest_id = $1 AND country_id = $2", contestID, countryIDs[2])
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "UPDATE group_standings SET cs = 5 WHERE contest_id = $1 AND country_id = $2", contestID, countryIDs[3])
+	require.NoError(t, err)
+
+	standings, err := repo.ListGroupStandings(ctx, contestID)
+	require.NoError(t, err)
+
+	// Verify that the first 4 standings (Group A) are sorted according to Cs descending
+	var groupAStandings []entity.GroupStanding
+	for _, s := range standings {
+		if s.Letter == "A" {
+			groupAStandings = append(groupAStandings, s)
+		}
+	}
+	require.Len(t, groupAStandings, 4)
+
+	assert.Equal(t, int64(5), groupAStandings[0].ConductScore)
+	assert.Equal(t, int64(2), groupAStandings[1].ConductScore)
+	assert.Equal(t, int64(-1), groupAStandings[2].ConductScore)
+	assert.Equal(t, int64(-5), groupAStandings[3].ConductScore)
 }
 

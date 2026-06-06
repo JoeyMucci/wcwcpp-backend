@@ -105,11 +105,27 @@ func main() {
 	matchPath, matchSvcHandler := v1connect.NewMatchServiceHandler(matchHandler, connect.WithCodec(jsonCodec))
 	mux.Handle(matchPath, matchSvcHandler)
 
+	// Simple and robust CORS middleware to support preflight OPTIONS requests from localhost:3000
+	corsMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Connect-Protocol-Version")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+
 	fmt.Println("Starting server on :8080")
 	// Use h2c for unencrypted HTTP/2 (required for Connect without TLS)
 	err = http.ListenAndServe(
 		":8080",
-		h2c.NewHandler(mux, &http2.Server{}),
+		h2c.NewHandler(corsMiddleware(mux), &http2.Server{}),
 	)
 	if err != nil {
 		log.Fatalf("Server failed: %v", err)

@@ -67,7 +67,7 @@ func newKnockoutPicksTableImpl(schemaName, tableName, alias string) knockoutPick
 		CountryIDColumn = postgres.StringColumn("country_id")
 		RoundColumn     = postgres.IntegerColumn("round")
 		allColumns      = postgres.ColumnList{UserIDColumn, ContestIDColumn, CountryIDColumn, RoundColumn}
-		mutableColumns  = postgres.ColumnList{RoundColumn}
+		mutableColumns  = postgres.ColumnList{}
 		defaultColumns  = postgres.ColumnList{}
 	)
 

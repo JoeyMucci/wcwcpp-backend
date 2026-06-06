@@ -300,11 +300,6 @@ export class CreateSubcontestRequest extends Message<CreateSubcontestRequest> {
  * @generated from message api.v1.CreateSubcontestResponse
  */
 export class CreateSubcontestResponse extends Message<CreateSubcontestResponse> {
-  /**
-   * @generated from field: string join_code = 1;
-   */
-  joinCode = "";
-
   constructor(data?: PartialMessage<CreateSubcontestResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -313,7 +308,6 @@ export class CreateSubcontestResponse extends Message<CreateSubcontestResponse> 
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "api.v1.CreateSubcontestResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "join_code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateSubcontestResponse {

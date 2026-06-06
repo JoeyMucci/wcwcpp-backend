@@ -94,6 +94,35 @@ func TestPicksHandler_ListGroupPicks(t *testing.T) {
 			},
 		},
 		{
+			name:  "success — finalized group standings and wildcard",
+			token: validToken,
+			mockFunc: func(ctx context.Context, userID string, contestSlug string) ([]entity.GroupPick, []entity.GroupStanding, error) {
+				rank1 := int32(1)
+				rank2 := int32(2)
+				rank3 := int32(3)
+				rank4 := int32(4)
+				isQual := true
+
+				standings := []entity.GroupStanding{
+					{Country: entity.Country{Code: "USA", FullName: "United States"}, Letter: "A", Points: 9, Wins: 3, Rank: &rank1},
+					{Country: entity.Country{Code: "MEX", FullName: "Mexico"}, Letter: "A", Points: 6, Wins: 2, Rank: &rank2},
+					{Country: entity.Country{Code: "CAN", FullName: "Canada"}, Letter: "A", Points: 3, Wins: 1, Rank: &rank3, IsThirdPlaceQualifier: &isQual},
+					{Country: entity.Country{Code: "ARG", FullName: "Argentina"}, Letter: "A", Points: 0, Rank: &rank4},
+				}
+				return samplePicks, standings, nil
+			},
+			expectError: false,
+			assertResp: func(t *testing.T, resp *connect.Response[v1.ListGroupPicksResponse]) {
+				require.Len(t, resp.Msg.Results, 1)
+				rg := resp.Msg.Results[0]
+				assert.Equal(t, "A", rg.Letter)
+				assert.True(t, rg.Finalized)
+				assert.True(t, rg.ExtraQualifierFinalized)
+				require.NotNil(t, rg.ExtraQualifier)
+				assert.True(t, *rg.ExtraQualifier)
+			},
+		},
+		{
 			name:  "contest not found",
 			token: validToken,
 			mockFunc: func(ctx context.Context, userID string, contestSlug string) ([]entity.GroupPick, []entity.GroupStanding, error) {

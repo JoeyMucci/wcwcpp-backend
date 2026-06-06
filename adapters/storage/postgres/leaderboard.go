@@ -99,7 +99,7 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	fromClause := table.SubcontestEntries.
 		INNER_JOIN(table.Subcontests, table.SubcontestEntries.SubcontestID.EQ(table.Subcontests.ID)).
 		INNER_JOIN(table.Users, table.SubcontestEntries.UserID.EQ(table.Users.ID)).
-		INNER_JOIN(table.ContestStandings,
+		LEFT_JOIN(table.ContestStandings,
 			table.SubcontestEntries.UserID.EQ(table.ContestStandings.UserID).
 				AND(table.Subcontests.ContestID.EQ(table.ContestStandings.ContestID)),
 		)
@@ -107,11 +107,11 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	// 1. Group Standings
 	stmt := postgres.SELECT(
 		table.Users.Username,
-		table.ContestStandings.GroupScore,
+		postgres.COALESCE(table.ContestStandings.GroupScore, postgres.Int32(0)).AS("contest_standings.group_score"),
 	).FROM(fromClause).WHERE(
 		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
-		table.ContestStandings.GroupScore.DESC(),
+		postgres.COALESCE(table.ContestStandings.GroupScore, postgres.Int32(0)).DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
 
 	var groupDest []dbLeaderboardRow
@@ -123,11 +123,11 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	// 2. Knockout Standings
 	stmt = postgres.SELECT(
 		table.Users.Username,
-		table.ContestStandings.KnockoutScore,
+		postgres.COALESCE(table.ContestStandings.KnockoutScore, postgres.Int32(0)).AS("contest_standings.knockout_score"),
 	).FROM(fromClause).WHERE(
 		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
-		table.ContestStandings.KnockoutScore.DESC(),
+		postgres.COALESCE(table.ContestStandings.KnockoutScore, postgres.Int32(0)).DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
 
 	var knockoutDest []dbLeaderboardRow
@@ -139,11 +139,11 @@ func (r *LeaderboardRepository) Subleaderboard(ctx context.Context, subcontestID
 	// 3. Overall Standings
 	stmt = postgres.SELECT(
 		table.Users.Username,
-		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).AS("contest_standings.group_score"),
+		postgres.COALESCE(table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore), postgres.Int32(0)).AS("contest_standings.group_score"),
 	).FROM(fromClause).WHERE(
 		table.SubcontestEntries.SubcontestID.EQ(postgres.UUID(parsedSubcontestID)),
 	).ORDER_BY(
-		table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore).DESC(),
+		postgres.COALESCE(table.ContestStandings.GroupScore.ADD(table.ContestStandings.KnockoutScore), postgres.Int32(0)).DESC(),
 	).LIMIT(int64(limit)).OFFSET(int64(offset))
 
 	var overallDest []dbLeaderboardRow

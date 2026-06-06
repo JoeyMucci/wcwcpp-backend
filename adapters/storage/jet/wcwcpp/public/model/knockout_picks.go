@@ -15,5 +15,5 @@ type KnockoutPicks struct {
 	UserID    uuid.UUID `sql:"primary_key"`
 	ContestID uuid.UUID `sql:"primary_key"`
 	CountryID uuid.UUID `sql:"primary_key"`
-	Round     int32
+	Round     int32     `sql:"primary_key"`
 }

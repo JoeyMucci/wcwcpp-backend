@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
+import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
 
 /**
  * @generated from message api.v1.User
@@ -70,9 +70,24 @@ export class Contest extends Message<Contest> {
   slug = "";
 
   /**
-   * @generated from field: bool active = 3;
+   * @generated from field: google.protobuf.Timestamp group_unlock_date = 3;
    */
-  active = false;
+  groupUnlockDate?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp group_lock_date = 4;
+   */
+  groupLockDate?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp knockout_unlock_date = 5;
+   */
+  knockoutUnlockDate?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp knockout_lock_date = 6;
+   */
+  knockoutLockDate?: Timestamp;
 
   constructor(data?: PartialMessage<Contest>) {
     super();
@@ -84,7 +99,10 @@ export class Contest extends Message<Contest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "group_unlock_date", kind: "message", T: Timestamp },
+    { no: 4, name: "group_lock_date", kind: "message", T: Timestamp },
+    { no: 5, name: "knockout_unlock_date", kind: "message", T: Timestamp },
+    { no: 6, name: "knockout_lock_date", kind: "message", T: Timestamp },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Contest {
@@ -128,6 +146,11 @@ export class Subcontest extends Message<Subcontest> {
    */
   isMember = false;
 
+  /**
+   * @generated from field: string join_code = 5;
+   */
+  joinCode = "";
+
   constructor(data?: PartialMessage<Subcontest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -140,6 +163,7 @@ export class Subcontest extends Message<Subcontest> {
     { no: 2, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "is_owner", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "is_member", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "join_code", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subcontest {
@@ -261,6 +285,11 @@ export class RankedCountry extends Message<RankedCountry> {
    */
   isThirdPlaceQualifier = false;
 
+  /**
+   * @generated from field: optional int32 rank = 12;
+   */
+  rank?: number;
+
   constructor(data?: PartialMessage<RankedCountry>) {
     super();
     proto3.util.initPartial(data, this);
@@ -280,6 +309,7 @@ export class RankedCountry extends Message<RankedCountry> {
     { no: 9, name: "goal_difference", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 10, name: "conduct_score", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 11, name: "is_third_place_qualifier", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 12, name: "rank", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RankedCountry {
@@ -361,6 +391,16 @@ export class RankedGroup extends Message<RankedGroup> {
    */
   extraQualifier?: boolean;
 
+  /**
+   * @generated from field: bool finalized = 4;
+   */
+  finalized = false;
+
+  /**
+   * @generated from field: bool extra_qualifier_finalized = 5;
+   */
+  extraQualifierFinalized = false;
+
   constructor(data?: PartialMessage<RankedGroup>) {
     super();
     proto3.util.initPartial(data, this);
@@ -372,6 +412,8 @@ export class RankedGroup extends Message<RankedGroup> {
     { no: 1, name: "letter", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "ranked_countries", kind: "message", T: RankedCountry, repeated: true },
     { no: 3, name: "extra_qualifier", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 4, name: "finalized", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "extra_qualifier_finalized", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RankedGroup {
