@@ -107,7 +107,12 @@ func (r *PicksRepository) ListGroupStandings(ctx context.Context, contestID stri
 		table.GroupStandings.ContestID.EQ(postgres.UUID(parsedContestID)),
 	).ORDER_BY(
 		table.GroupStandings.Letter.ASC(),
+		table.GroupStandings.Rank.ASC(),
 		table.GroupStandings.Points.DESC(),
+		table.GroupStandings.Gd.DESC(),
+		table.GroupStandings.Gf.DESC(),
+		table.GroupStandings.Cs.DESC(),
+		table.Countries.Code.ASC(),
 	)
 
 	var rows []dbGroupStandingRow
@@ -209,6 +214,26 @@ func (r *PicksRepository) CreateGroupPicks(ctx context.Context, userID string, c
 		return err
 	}
 
+	// Insert record into contest_standings with 0 values if it does not exist
+	standingsStmt := table.ContestStandings.INSERT(
+		table.ContestStandings.ContestID,
+		table.ContestStandings.UserID,
+		table.ContestStandings.GroupScore,
+		table.ContestStandings.KnockoutScore,
+	).VALUES(
+		parsedContestID,
+		parsedUserID,
+		postgres.Int32(0),
+		postgres.Int32(0),
+	).ON_CONFLICT(
+		table.ContestStandings.ContestID,
+		table.ContestStandings.UserID,
+	).DO_NOTHING()
+
+	if _, err := standingsStmt.ExecContext(ctx, tx); err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 
@@ -252,85 +277,40 @@ func (r *PicksRepository) ListKnockoutPicks(ctx context.Context, userID string, 
 	return entity.KnockoutPick{Entries: result}, nil
 }
 
-type matchWinnerRow struct {
-	model.Matches
-	Country1Code     string
-	Country1FullName string
-	Country2Code     string
-	Country2FullName string
+type dbKnockoutStandingRow struct {
+	model.KnockoutStandings
+	model.Countries
 }
 
 func (r *PicksRepository) ListKnockoutResults(ctx context.Context, contestID string) (entity.KnockoutPick, error) {
 	parsedContestID := uuid.MustParse(contestID)
 
-	c1 := table.Countries.AS("country1")
-	c2 := table.Countries.AS("country2")
-
 	stmt := postgres.SELECT(
-		table.Matches.AllColumns,
-		c1.Code.AS("match_winner_row.country1_code"),
-		c1.FullName.AS("match_winner_row.country1_full_name"),
-		c2.Code.AS("match_winner_row.country2_code"),
-		c2.FullName.AS("match_winner_row.country2_full_name"),
+		table.KnockoutStandings.AllColumns,
+		table.Countries.Code,
+		table.Countries.FullName,
 	).FROM(
-		table.Matches.
-			INNER_JOIN(c1, table.Matches.Country1ID.EQ(c1.ID)).
-			INNER_JOIN(c2, table.Matches.Country2ID.EQ(c2.ID)),
+		table.KnockoutStandings.INNER_JOIN(
+			table.Countries, table.KnockoutStandings.CountryID.EQ(table.Countries.ID),
+		),
 	).WHERE(
-		table.Matches.Round.GT(postgres.Int32(0)).
-			AND(table.Matches.ContestID.EQ(postgres.UUID(parsedContestID))),
+		table.KnockoutStandings.ContestID.EQ(postgres.UUID(parsedContestID)),
 	).ORDER_BY(
-		table.Matches.Round.ASC(),
-		table.Matches.RoundIndex.ASC(),
+		table.KnockoutStandings.Round.ASC(),
+		table.Countries.Code.ASC(),
 	)
 
-	var rows []matchWinnerRow
+	var rows []dbKnockoutStandingRow
 	if err := stmt.QueryContext(ctx, r.db, &rows); err != nil {
 		return entity.KnockoutPick{}, err
 	}
 
 	result := make([]entity.KnockoutPickEntry, 0, len(rows))
 	for _, row := range rows {
-		if row.Country1Goals == nil || row.Country2Goals == nil {
-			continue
-		}
-
-		g1 := *row.Country1Goals
-		g2 := *row.Country2Goals
-
-		var winnerCode string
-		var winnerName string
-
-		if g1 > g2 {
-			winnerCode = row.Country1Code
-			winnerName = row.Country1FullName
-		} else if g2 > g1 {
-			winnerCode = row.Country2Code
-			winnerName = row.Country2FullName
-		} else {
-			// Draw: check penalties
-			if row.Country1Penalties != nil && row.Country2Penalties != nil {
-				p1 := *row.Country1Penalties
-				p2 := *row.Country2Penalties
-				if p1 > p2 {
-					winnerCode = row.Country1Code
-					winnerName = row.Country1FullName
-				} else if p2 > p1 {
-					winnerCode = row.Country2Code
-					winnerName = row.Country2FullName
-				}
-			}
-		}
-
-		if winnerCode != "" {
-			result = append(result, entity.KnockoutPickEntry{
-				Country: entity.Country{
-					Code:     winnerCode,
-					FullName: winnerName,
-				},
-				Round: int(row.Round),
-			})
-		}
+		result = append(result, entity.KnockoutPickEntry{
+			Country: entity.Country{Code: row.Countries.Code, FullName: row.Countries.FullName},
+			Round:   int(row.KnockoutStandings.Round),
+		})
 	}
 	return entity.KnockoutPick{Entries: result}, nil
 }
@@ -387,6 +367,26 @@ func (r *PicksRepository) CreateKnockoutPicks(ctx context.Context, userID string
 
 	_, err = stmt.ExecContext(ctx, tx)
 	if err != nil {
+		return err
+	}
+
+	// Insert record into contest_standings with 0 values if it does not exist
+	standingsStmt := table.ContestStandings.INSERT(
+		table.ContestStandings.ContestID,
+		table.ContestStandings.UserID,
+		table.ContestStandings.GroupScore,
+		table.ContestStandings.KnockoutScore,
+	).VALUES(
+		parsedContestID,
+		parsedUserID,
+		postgres.Int32(0),
+		postgres.Int32(0),
+	).ON_CONFLICT(
+		table.ContestStandings.ContestID,
+		table.ContestStandings.UserID,
+	).DO_NOTHING()
+
+	if _, err := standingsStmt.ExecContext(ctx, tx); err != nil {
 		return err
 	}
 

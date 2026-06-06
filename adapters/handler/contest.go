@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/joey/wcwcpp-backend/adapters/interceptor"
@@ -12,6 +11,7 @@ import (
 	v1 "github.com/joey/wcwcpp-backend/pkg/api/v1"
 	"github.com/joey/wcwcpp-backend/pkg/api/v1/v1connect"
 	"github.com/joey/wcwcpp-backend/ports"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type ContestHandler struct {
@@ -32,15 +32,14 @@ func (h *ContestHandler) ListContests(ctx context.Context, req *connect.Request[
 		}
 
 		var pbContests []*v1.Contest
-		now := time.Now()
 		for _, c := range contests {
-			isActive := (now.After(c.GroupUnlockDate) && now.Before(c.GroupLockDate)) ||
-				(now.After(c.KnockoutUnlockDate) && now.Before(c.KnockoutLockDate))
-
 			pbContests = append(pbContests, &v1.Contest{
-				Title:  c.Title,
-				Slug:   c.Slug,
-				Active: isActive,
+				Title:              c.Title,
+				Slug:               c.Slug,
+				GroupUnlockDate:    timestamppb.New(c.GroupUnlockDate.UTC()),
+				GroupLockDate:      timestamppb.New(c.GroupLockDate.UTC()),
+				KnockoutUnlockDate: timestamppb.New(c.KnockoutUnlockDate.UTC()),
+				KnockoutLockDate:   timestamppb.New(c.KnockoutLockDate.UTC()),
 			})
 		}
 
@@ -119,6 +118,7 @@ func (h *ContestHandler) ListSubcontests(ctx context.Context, req *connect.Reque
 				Slug:     s.Slug,
 				IsOwner:  s.IsOwner,
 				IsMember: s.IsMember,
+				JoinCode: s.JoinCode,
 			})
 		}
 
@@ -136,16 +136,14 @@ func (h *ContestHandler) CreateSubcontest(ctx context.Context, req *connect.Requ
 			return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 		}
 
-		joinCode, err := h.svc.CreateSubcontest(ctx, userID, req.Msg.ContestSlug, req.Msg.SubcontestTitle, req.Msg.SelfJoin)
+		_, _, err := h.svc.CreateSubcontest(ctx, userID, req.Msg.ContestSlug, req.Msg.SubcontestTitle, req.Msg.SelfJoin)
 		if err != nil {
 			if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
 				return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("a subcontest with this title or join code already exists"))
 			}
 			return nil, err
 		}
-		return connect.NewResponse(&v1.CreateSubcontestResponse{
-			JoinCode: joinCode,
-		}), nil
+		return connect.NewResponse(&v1.CreateSubcontestResponse{}), nil
 	}
 	return interceptor.WithAuth(handlerFunc)(ctx, req)
 }

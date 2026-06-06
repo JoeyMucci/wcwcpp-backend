@@ -36,7 +36,7 @@ func TestLeaderboardHandler_Leaderboard(t *testing.T) {
 		{
 			name: "success",
 			mockFunc: func(ctx context.Context, contestSlug string, limit int32, offset int32) (map[string][]entity.LeaderboardEntry, error) {
-				return map[string][]entity.LeaderboardEntry{"group": []entity.LeaderboardEntry{{}}}, nil
+				return map[string][]entity.LeaderboardEntry{"group": {{}}}, nil
 			},
 			expectError: false,
 		},
@@ -95,7 +95,7 @@ func TestLeaderboardHandler_Subleaderboard(t *testing.T) {
 				if userID != "user-123" {
 					return nil, errors.New("unexpected userID in mock")
 				}
-				return map[string][]entity.LeaderboardEntry{"group": []entity.LeaderboardEntry{{}}}, nil
+				return map[string][]entity.LeaderboardEntry{"group": {{}}}, nil
 			},
 			expectError: false,
 		},

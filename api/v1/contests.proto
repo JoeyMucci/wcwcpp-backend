@@ -42,9 +42,7 @@ message CreateSubcontestRequest {
     bool self_join = 3;
 }
 
-message CreateSubcontestResponse {
-    string join_code = 1;
-}
+message CreateSubcontestResponse {}
 
 message DeleteSubcontestRequest {
     string subcontest_slug = 1;

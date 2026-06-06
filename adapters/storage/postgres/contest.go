@@ -852,10 +852,11 @@ func (r *ContestRepository) UpdateMatch(ctx context.Context, contestID string, m
 				achievedRound = 5
 				points = 30
 			case 5:
-				achievedRound = 6
 				if currentRoundIndex == 1 {
+					achievedRound = 7
 					points = 5 // Third Place match winner
 				} else {
+					achievedRound = 6
 					points = 35 // Final match winner (Champion)
 				}
 			}

@@ -98,7 +98,7 @@ CREATE TABLE knockout_picks (
     contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
     country_id UUID NOT NULL REFERENCES countries(id) ON DELETE CASCADE,
     round INT NOT NULL,
-    PRIMARY KEY (user_id, contest_id, country_id)
+    PRIMARY KEY (user_id, contest_id, country_id, round)
 );
 
 CREATE TABLE matches (

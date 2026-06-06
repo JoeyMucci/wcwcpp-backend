@@ -32,7 +32,7 @@ type mockContestService struct {
 	listContestsFunc     func(ctx context.Context) ([]entity.Contest, error)
 	createContestFunc    func(ctx context.Context, contest entity.Contest) error
 	listSubcontestsFunc  func(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error)
-	createSubcontestFunc func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error)
+	createSubcontestFunc func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, string, error)
 	deleteSubcontestFunc func(ctx context.Context, userID string, subcontestSlug string) error
 	joinSubcontestFunc   func(ctx context.Context, userID string, joinCode string) error
 }
@@ -47,7 +47,7 @@ func (m *mockContestService) ListContests(ctx context.Context) ([]entity.Contest
 func (m *mockContestService) ListSubcontests(ctx context.Context, userID string, contestSlug string) ([]entity.Subcontest, error) {
 	return m.listSubcontestsFunc(ctx, userID, contestSlug)
 }
-func (m *mockContestService) CreateSubcontest(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
+func (m *mockContestService) CreateSubcontest(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, string, error) {
 	return m.createSubcontestFunc(ctx, userID, contestSlug, title, selfJoin)
 }
 func (m *mockContestService) DeleteSubcontest(ctx context.Context, userID string, subcontestSlug string) error {
@@ -94,9 +94,21 @@ func TestContestHandler_ListContests(t *testing.T) {
 			},
 			expectError: false,
 			expectContests: []*v1.Contest{
-				{Title: "Active Group", Slug: "active-group", Active: true},
-				{Title: "Inactive Past", Slug: "inactive-past", Active: false},
-				{Title: "Active Knockout", Slug: "active-knockout", Active: true},
+				{
+					Title: "Active Group", Slug: "active-group",
+					GroupUnlockDate: timestamppb.New(past.UTC()), GroupLockDate: timestamppb.New(future.UTC()),
+					KnockoutUnlockDate: timestamppb.New(farFuture.UTC()), KnockoutLockDate: timestamppb.New(farFuture.Add(24 * time.Hour).UTC()),
+				},
+				{
+					Title: "Inactive Past", Slug: "inactive-past",
+					GroupUnlockDate: timestamppb.New(past.Add(-48 * time.Hour).UTC()), GroupLockDate: timestamppb.New(past.Add(-24 * time.Hour).UTC()),
+					KnockoutUnlockDate: timestamppb.New(past.Add(-24 * time.Hour).UTC()), KnockoutLockDate: timestamppb.New(past.UTC()),
+				},
+				{
+					Title: "Active Knockout", Slug: "active-knockout",
+					GroupUnlockDate: timestamppb.New(past.Add(-48 * time.Hour).UTC()), GroupLockDate: timestamppb.New(past.Add(-24 * time.Hour).UTC()),
+					KnockoutUnlockDate: timestamppb.New(past.UTC()), KnockoutLockDate: timestamppb.New(future.UTC()),
+				},
 			},
 		},
 		{
@@ -128,8 +140,13 @@ func TestContestHandler_ListContests(t *testing.T) {
 					t.Errorf("expected %d contests, got %d", len(tt.expectContests), len(resp.Msg.Contests))
 				}
 				for i, expected := range tt.expectContests {
-					if resp.Msg.Contests[i].Title != expected.Title || resp.Msg.Contests[i].Slug != expected.Slug || resp.Msg.Contests[i].Active != expected.Active {
-						t.Errorf("expected contest %v, got %v", expected, resp.Msg.Contests[i])
+					got := resp.Msg.Contests[i]
+					if got.Title != expected.Title || got.Slug != expected.Slug ||
+						!got.GroupUnlockDate.AsTime().Equal(expected.GroupUnlockDate.AsTime()) ||
+						!got.GroupLockDate.AsTime().Equal(expected.GroupLockDate.AsTime()) ||
+						!got.KnockoutUnlockDate.AsTime().Equal(expected.KnockoutUnlockDate.AsTime()) ||
+						!got.KnockoutLockDate.AsTime().Equal(expected.KnockoutLockDate.AsTime()) {
+						t.Errorf("expected contest %v, got %v", expected, got)
 					}
 				}
 			}
@@ -349,23 +366,23 @@ func TestContestHandler_CreateSubcontest(t *testing.T) {
 	tests := []struct {
 		name        string
 		token       string
-		mockFunc    func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error)
+		mockFunc    func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, string, error)
 		expectError bool
 		errCode     connect.Code
 	}{
 		{
 			name:  "success",
 			token: token,
-			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
-				return "JOINCODE", nil
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, string, error) {
+				return "JOINCODE", "subcontest-slug", nil
 			},
 			expectError: false,
 		},
 		{
 			name:  "already exists",
 			token: token,
-			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
-				return "", errors.New("pq: duplicate key value violates unique constraint")
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, string, error) {
+				return "", "", errors.New("pq: duplicate key value violates unique constraint")
 			},
 			expectError: true,
 			errCode:     connect.CodeAlreadyExists,
@@ -373,16 +390,16 @@ func TestContestHandler_CreateSubcontest(t *testing.T) {
 		{
 			name:  "error",
 			token: token,
-			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
-				return "", errors.New("service error")
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, string, error) {
+				return "", "", errors.New("service error")
 			},
 			expectError: true,
 		},
 		{
 			name:  "unauthenticated",
 			token: "",
-			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, error) {
-				return "", nil
+			mockFunc: func(ctx context.Context, userID string, contestSlug string, title string, selfJoin bool) (string, string, error) {
+				return "", "", nil
 			},
 			expectError: true,
 			errCode:     connect.CodeUnauthenticated,
@@ -399,16 +416,14 @@ func TestContestHandler_CreateSubcontest(t *testing.T) {
 				req.Header().Set("Authorization", "Bearer "+tt.token)
 			}
 
-			resp, err := h.CreateSubcontest(context.Background(), req)
+			_, err := h.CreateSubcontest(context.Background(), req)
 			if (err != nil) != tt.expectError {
 				t.Errorf("expected error %v, got %v", tt.expectError, err)
 			}
 			if tt.expectError && tt.errCode != 0 && connect.CodeOf(err) != tt.errCode {
 				t.Errorf("expected error code %v, got %v", tt.errCode, connect.CodeOf(err))
 			}
-			if !tt.expectError && resp.Msg.JoinCode != "JOINCODE" {
-				t.Errorf("expected join code JOINCODE, got %s", resp.Msg.JoinCode)
-			}
+			// CreateSubcontestResponse is now empty, so no fields to assert on.
 		})
 	}
 }

@@ -111,13 +111,15 @@ func TestLeaderboardRepository_Subleaderboard(t *testing.T) {
 	u1ID := uuid.New().String()
 	u2ID := uuid.New().String()
 	u3ID := uuid.New().String() // not in subcontest
+	u4ID := uuid.New().String() // in subcontest, but has no contest_standings (0 points)
 
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO users (id, email, username) VALUES
 		($1, 'user1@example.com', 'Alice'),
 		($2, 'user2@example.com', 'Bob'),
-		($3, 'user3@example.com', 'Charlie')`,
-		u1ID, u2ID, u3ID,
+		($3, 'user3@example.com', 'Charlie'),
+		($4, 'user4@example.com', 'David')`,
+		u1ID, u2ID, u3ID, u4ID,
 	)
 	require.NoError(t, err)
 
@@ -130,16 +132,17 @@ func TestLeaderboardRepository_Subleaderboard(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// 4. Add Alice and Bob to subcontest entries (members)
+	// 4. Add Alice, Bob, and David to subcontest entries (members)
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO subcontest_entries (subcontest_id, user_id) VALUES
 		($1, $2),
-		($1, $3)`,
-		subcontestID, u1ID, u2ID,
+		($1, $3),
+		($1, $4)`,
+		subcontestID, u1ID, u2ID, u4ID,
 	)
 	require.NoError(t, err)
 
-	// 5. Create standings
+	// 5. Create standings (for Alice, Bob, and Charlie)
 	// Alice: Group 10, Knockout 5
 	// Bob: Group 8, Knockout 12
 	// Charlie: Group 25, Knockout 25 (not in subcontest, should not appear in subleaderboard!)
@@ -157,16 +160,33 @@ func TestLeaderboardRepository_Subleaderboard(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
-	// Verify only Alice and Bob appear
+	// Verify only Alice, Bob, and David appear
 	group := result["group"]
-	require.Len(t, group, 2)
+	require.Len(t, group, 3)
 	assert.Equal(t, "Alice", group[0].Name)
+	assert.Equal(t, int64(10), group[0].Score)
 	assert.Equal(t, "Bob", group[1].Name)
+	assert.Equal(t, int64(8), group[1].Score)
+	assert.Equal(t, "David", group[2].Name)
+	assert.Equal(t, int64(0), group[2].Score)
 
 	knockout := result["knockout"]
-	require.Len(t, knockout, 2)
+	require.Len(t, knockout, 3)
 	assert.Equal(t, "Bob", knockout[0].Name)
+	assert.Equal(t, int64(12), knockout[0].Score)
 	assert.Equal(t, "Alice", knockout[1].Name)
+	assert.Equal(t, int64(5), knockout[1].Score)
+	assert.Equal(t, "David", knockout[2].Name)
+	assert.Equal(t, int64(0), knockout[2].Score)
+
+	overall := result["overall"]
+	require.Len(t, overall, 3)
+	assert.Equal(t, "Bob", overall[0].Name)
+	assert.Equal(t, int64(20), overall[0].Score)
+	assert.Equal(t, "Alice", overall[1].Name)
+	assert.Equal(t, int64(15), overall[1].Score)
+	assert.Equal(t, "David", overall[2].Name)
+	assert.Equal(t, int64(0), overall[2].Score)
 }
 
 // TestLeaderboardRepository_Subleaderboard_MultiContestIsolation verifies that when a user
