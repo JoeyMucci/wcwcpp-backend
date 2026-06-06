@@ -2,6 +2,11 @@
   "name": "wcwcpp-api",
   "version": "1.0.1",
   "description": "ConnectRPC client and Protobuf definitions for wcwcpp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JoeyMucci/wcwcpp-backend",
+    "directory": "sdk/ts"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
