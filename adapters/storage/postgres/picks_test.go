@@ -111,7 +111,7 @@ func TestPicksRepository_ListGroupPicks(t *testing.T) {
 
 	// Get codes for group A and B
 	var groupACodes, groupBCodes []string
-	for code, _ := range codeToID {
+	for code := range codeToID {
 		// We seeded A with first 4 — check letter via group_standings
 		var letter string
 		err := db.QueryRowContext(ctx,
@@ -367,4 +367,3 @@ func TestPicksRepository_ListGroupStandings_ConductScoreOrdering(t *testing.T) {
 	assert.Equal(t, int64(-1), groupAStandings[2].ConductScore)
 	assert.Equal(t, int64(-5), groupAStandings[3].ConductScore)
 }
-
