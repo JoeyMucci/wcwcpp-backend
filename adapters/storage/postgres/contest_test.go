@@ -42,8 +42,8 @@ func TestContestRepository_CreateCountries(t *testing.T) {
 	repo := NewContestRepository(setupTestDB(t))
 
 	ctx := context.Background()
-	uniqueSuffix1 := uuid.New().String()[:3]
-	uniqueSuffix2 := uuid.New().String()[:3]
+	uniqueSuffix1 := "C01"
+	uniqueSuffix2 := "C02"
 
 	countries := []entity.Country{
 		{Code: uniqueSuffix1, FullName: "Country " + uniqueSuffix1},
@@ -59,7 +59,7 @@ func TestContestRepository_CreateCountries(t *testing.T) {
 	require.NoError(t, err, "re-inserting the same countries should not error out")
 
 	// 3. Inserting a mix of existing and new countries
-	uniqueSuffix3 := uuid.New().String()[:3]
+	uniqueSuffix3 := "C03"
 	mixedCountries := []entity.Country{
 		{Code: uniqueSuffix1, FullName: "Country " + uniqueSuffix1}, // Existing
 		{Code: uniqueSuffix3, FullName: "Country " + uniqueSuffix3}, // New
@@ -87,8 +87,8 @@ func TestContestRepository_CreateMatches(t *testing.T) {
 	require.NoError(t, err)
 
 	// 2. Setup test countries
-	c1Code := uuid.New().String()[:3]
-	c2Code := uuid.New().String()[:3]
+	c1Code := "C01"
+	c2Code := "C02"
 	err = repo.CreateCountries(ctx, []entity.Country{
 		{Code: c1Code, FullName: "Team " + c1Code},
 		{Code: c2Code, FullName: "Team " + c2Code},
@@ -140,14 +140,14 @@ func TestContestRepository_CreateGroupStandings(t *testing.T) {
 	require.NoError(t, repo.CreateContest(ctx, contest))
 
 	// Setup countries for two groups
-	c1 := uuid.New().String()[:3]
-	c2 := uuid.New().String()[:3]
-	c3 := uuid.New().String()[:3]
-	c4 := uuid.New().String()[:3]
-	c5 := uuid.New().String()[:3]
-	c6 := uuid.New().String()[:3]
-	c7 := uuid.New().String()[:3]
-	c8 := uuid.New().String()[:3]
+	c1 := "C01"
+	c2 := "C02"
+	c3 := "C03"
+	c4 := "C04"
+	c5 := "C05"
+	c6 := "C06"
+	c7 := "C07"
+	c8 := "C08"
 
 	countries := []entity.Country{
 		{Code: c1, FullName: "Country " + c1},

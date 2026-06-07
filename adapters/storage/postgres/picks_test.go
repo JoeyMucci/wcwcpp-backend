@@ -33,10 +33,7 @@ func setupPicksTest(t *testing.T) (*PicksRepository, string, map[string]string) 
 	require.NoError(t, contestRepo.CreateContest(ctx, contest))
 
 	// Two groups: A (c1–c4) and B (c5–c8)
-	codes := make([]string, 8)
-	for i := range codes {
-		codes[i] = uuid.New().String()[:3]
-	}
+	codes := []string{"C01", "C02", "C03", "C04", "C05", "C06", "C07", "C08"}
 	countries := make([]entity.Country, 8)
 	for i, code := range codes {
 		countries[i] = entity.Country{Code: code, FullName: "Country " + code}
