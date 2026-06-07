@@ -124,15 +124,26 @@ func main() {
 	// Simple and robust CORS middleware to support preflight OPTIONS requests
 	corsMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			reqOrigin := r.Header.Get("Origin")
+			reqOrigin := strings.TrimRight(strings.TrimSpace(r.Header.Get("Origin")), "/")
 			for _, allowed := range allowedOrigins {
-				if reqOrigin == allowed {
-					w.Header().Set("Access-Control-Allow-Origin", allowed)
+				cleanAllowed := strings.TrimRight(strings.TrimSpace(allowed), "/")
+				if strings.EqualFold(reqOrigin, cleanAllowed) {
+					w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
+					w.Header().Set("Access-Control-Allow-Credentials", "true")
 					break
 				}
 			}
 			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Connect-Protocol-Version")
+			
+			// Dynamically allow requested headers to be resilient to browser/library-specific differences
+			reqHeaders := r.Header.Get("Access-Control-Request-Headers")
+			if reqHeaders != "" {
+				w.Header().Set("Access-Control-Allow-Headers", reqHeaders)
+			} else {
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Connect-Protocol-Version")
+			}
+			
+			w.Header().Set("Access-Control-Expose-Headers", "Connect-Error-Info, Connect-Protocol-Version, Grpc-Status, Grpc-Message, Grpc-Status-Details-Bin")
 			w.Header().Set("Access-Control-Max-Age", "3600")
 
 			if r.Method == "OPTIONS" {
