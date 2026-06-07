@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"log"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -11,40 +13,90 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-func setupTestDB(t *testing.T) *sql.DB {
+var (
+	sharedDB        *sql.DB
+	sharedContainer *postgres.PostgresContainer
+)
+
+func TestMain(m *testing.M) {
 	ctx := context.Background()
 
-	pgContainer, err := postgres.Run(ctx,
+	// Start a single PostgreSQL container for all tests in this package
+	container, err := postgres.Run(ctx,
 		"postgres:15-alpine",
 		postgres.WithInitScripts(filepath.Join("..", "..", "..", "db", "schema.sql")),
 		postgres.WithDatabase("wcwcpp-test"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("password"),
 	)
-	require.NoError(t, err)
+	if err != nil {
+		log.Fatalf("failed to start postgres container: %v", err)
+	}
+	sharedContainer = container
 
-	t.Cleanup(func() {
-		require.NoError(t, pgContainer.Terminate(ctx))
-	})
-
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	require.NoError(t, err)
+	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		terminateContainer()
+		log.Fatalf("failed to get connection string: %v", err)
+	}
 
 	db, err := sql.Open("postgres", connStr)
-	require.NoError(t, err)
+	if err != nil {
+		terminateContainer()
+		log.Fatalf("failed to open database connection: %v", err)
+	}
+	sharedDB = db
 
 	// Wait for DB to be truly ready
-	for range 10 {
+	for i := 0; i < 10; i++ {
 		if err = db.Ping(); err == nil {
 			break
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	require.NoError(t, err, "failed to connect to test container db")
-
-	t.Cleanup(func() {
+	if err != nil {
 		db.Close()
-	})
+		terminateContainer()
+		log.Fatalf("failed to connect to test container db: %v", err)
+	}
 
-	return db
+	// Run all package tests
+	code := m.Run()
+
+	// Clean up resources after all tests have completed
+	db.Close()
+	terminateContainer()
+
+	os.Exit(code)
+}
+
+func terminateContainer() {
+	if sharedContainer != nil {
+		ctx := context.Background()
+		_ = sharedContainer.Terminate(ctx)
+	}
+}
+
+func setupTestDB(t *testing.T) *sql.DB {
+	ctx := context.Background()
+
+	// Truncate all tables to ensure a clean state for the test
+	_, err := sharedDB.ExecContext(ctx, `
+		TRUNCATE TABLE 
+			group_picks, 
+			knockout_picks, 
+			group_standings, 
+			knockout_standings, 
+			subcontest_entries, 
+			contest_standings, 
+			subcontests, 
+			matches, 
+			countries, 
+			contests, 
+			users 
+		CASCADE;
+	`)
+	require.NoError(t, err, "failed to truncate tables for clean test state")
+
+	return sharedDB
 }

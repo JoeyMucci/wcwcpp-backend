@@ -143,9 +143,14 @@ func main() {
 		})
 	}
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Fatal("PORT environment variable is required but not set")
+	}
+
 	// Create a production-ready HTTP server with h2c and timeouts
 	srv := &http.Server{
-		Addr:              ":8080",
+		Addr:              ":" + port,
 		Handler:           h2c.NewHandler(corsMiddleware(mux), &http2.Server{}),
 		ReadHeaderTimeout: 2 * time.Second,
 		ReadTimeout:       5 * time.Second,
@@ -158,7 +163,7 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		fmt.Println("Starting server on :8080")
+		fmt.Printf("Starting server on :%s\n", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed: %v", err)
 		}
